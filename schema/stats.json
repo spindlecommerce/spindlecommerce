@@ -1,0 +1,32 @@
+{
+  "storefront": {
+    "queries": 17,
+    "mutations": 27,
+    "subscriptions": 1,
+    "types": 157,
+    "cursorConnections": 4,
+    "pageNumberPaginatedFields": 0,
+    "mutationsReturningResultUnions": 27,
+    "mutationsReturningBareScalars": 0,
+    "typedErrorTypes": 9,
+    "oneOfInputs": 4,
+    "floatMoneyFields": 0,
+    "nodeTypes": 11,
+    "deprecatedFields": 5
+  },
+  "admin": {
+    "queries": 66,
+    "mutations": 139,
+    "subscriptions": 1,
+    "types": 496,
+    "cursorConnections": 13,
+    "pageNumberPaginatedFields": 0,
+    "mutationsReturningResultUnions": 139,
+    "mutationsReturningBareScalars": 0,
+    "typedErrorTypes": 9,
+    "oneOfInputs": 5,
+    "floatMoneyFields": 0,
+    "nodeTypes": 30,
+    "deprecatedFields": 0
+  }
+}

@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import "@fontsource-variable/plus-jakarta-sans";
+/* admin/vite.config.ts appends an @source for each plugin admin module's directory, since Tailwind
+   scans only admin/ by itself. */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  /* From brand/tokens.json. Derived tones keep text at 4.5:1 contrast and controls at 3:1. */
+  --radius: 0.75rem;
+  --background: #ffffff;
+  --foreground: #241948;
+  --card: #ffffff;
+  --card-foreground: #241948;
+  --popover: #ffffff;
+  --popover-foreground: #241948;
+  --primary: #5b3ef4;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f4f9;
+  --secondary-foreground: #241948;
+  --muted: #f5f4f9;
+  --muted-foreground: #665c7a;
+  --accent: #efecfd;
+  --accent-foreground: #241948;
+  --destructive: oklch(0.54 0.215 27);
+  --success: oklch(0.49 0.15 155);
+  --warning: oklch(0.52 0.16 70);
+  --info: oklch(0.5 0.15 240);
+  --border: #e4e1ee;
+  --input: #8f86a3;
+  --ring: #5b3ef4;
+  --sidebar: #f5f4f9;
+  --sidebar-foreground: #241948;
+  --sidebar-accent: #e8e4fc;
+  --chart-1: #5b3ef4;
+  --chart-2: oklch(0.65 0.15 175);
+  --chart-3: #ff8b42;
+  --chart-4: oklch(0.62 0.2 340);
+}
+
+/* Brand violet is too dim as text on the dark surface, so primary uses the dark accent colour. */
+.dark {
+  --background: #151025;
+  --foreground: #ffffff;
+  --card: #1e1734;
+  --card-foreground: #ffffff;
+  --popover: #231b3d;
+  --popover-foreground: #ffffff;
+  --primary: #a594f0;
+  --primary-foreground: #151025;
+  --secondary: #251d40;
+  --secondary-foreground: #ffffff;
+  --muted: #251d40;
+  --muted-foreground: #b9b0cc;
+  --accent: #2e2552;
+  --accent-foreground: #ffffff;
+  --destructive: oklch(0.68 0.19 25);
+  --success: oklch(0.7 0.15 155);
+  --warning: oklch(0.8 0.15 75);
+  --info: oklch(0.7 0.13 240);
+  --border: #2e2647;
+  --input: #6e6490;
+  --ring: #a594f0;
+  --sidebar: #1e1734;
+  --sidebar-foreground: #ddd7ea;
+  --sidebar-accent: #2e2552;
+  --chart-1: #a594f0;
+  --chart-2: oklch(0.72 0.13 175);
+  --chart-3: #ff8b42;
+  --chart-4: oklch(0.7 0.17 340);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply bg-background text-foreground antialiased;
+  }
+  body {
+    @apply min-h-dvh text-sm;
+  }
+  ::selection {
+    @apply bg-primary/20;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Formatted text in the rich text editor (components/rich-text.tsx). */
+@layer components {
+  .rich-text-content {
+    @apply text-[13px] leading-relaxed break-words;
+    & > * + * {
+      @apply mt-2;
+    }
+    & h1 {
+      @apply mt-4 text-lg font-semibold;
+    }
+    & h2 {
+      @apply mt-4 text-base font-semibold;
+    }
+    & h3,
+    & h4,
+    & h5,
+    & h6 {
+      @apply mt-3 text-sm font-semibold;
+    }
+    & > :first-child {
+      @apply mt-0;
+    }
+    & ul {
+      @apply list-disc pl-5;
+    }
+    & ol {
+      @apply list-decimal pl-5;
+    }
+    & li > p {
+      @apply my-0.5;
+    }
+    & blockquote {
+      @apply border-l-2 pl-3 text-muted-foreground;
+    }
+    & a {
+      @apply text-primary underline underline-offset-2;
+    }
+    & code {
+      @apply rounded bg-muted px-1 py-0.5 font-mono text-[12px];
+    }
+    & pre {
+      @apply overflow-x-auto rounded-md bg-muted p-3;
+    }
+    & pre code {
+      @apply bg-transparent p-0;
+    }
+    & hr {
+      @apply my-4 border-border;
+    }
+    & img {
+      @apply max-h-72 max-w-full rounded-md;
+    }
+    & img.ProseMirror-selectednode {
+      @apply ring-2 ring-ring;
+    }
+    /* The placeholder, on the first empty paragraph of an empty editor. */
+    & p.is-editor-empty:first-child::before {
+      @apply pointer-events-none float-left h-0 text-muted-foreground;
+      content: attr(data-placeholder);
+    }
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

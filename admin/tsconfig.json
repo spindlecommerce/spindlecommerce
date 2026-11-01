@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": true,
+    "paths": { "@/*": ["./src/*"], "@ecom/admin": ["./src/plugin-sdk.ts"] },
+    "plugins": [
+      {
+        "name": "gql.tada/ts-plugin",
+        "schema": "../schema/admin.graphql",
+        "tadaOutputLocation": "./src/graphql/graphql-env.d.ts"
+      }
+    ]
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "../src/visual-editing/bridge.js",
+    "../plugins/**/admin.tsx",
+    "../plugins/**/admin/**/*",
+    "../test/fixtures/plugins/**/admin.tsx",
+    "../test/fixtures/plugins/**/admin/**/*"
+  ]
+}

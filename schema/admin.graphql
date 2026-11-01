@@ -1,0 +1,4597 @@
+"""
+Run the operation in a channel, locale and currency. Overrides the X-Channel, Accept-Language and X-Currency headers.
+"""
+directive @inContext(
+  """Channel code, e.g. eu."""
+  channel: String
+
+  """ISO 4217 code, e.g. GBP."""
+  currency: String
+
+  """BCP 47 locale, e.g. de-DE."""
+  locale: String
+) on MUTATION | QUERY | SUBSCRIPTION
+
+"""An active cart with items that has not changed for a while."""
+type AbandonedCart {
+  channel: Channel
+  currencyCode: CurrencyCode
+  customer: Customer
+  email: EmailAddress
+  id: ID
+  items: Int
+  lines: Int
+
+  """At current prices."""
+  subtotal: Money
+  updatedAt: DateTime
+}
+
+type AcceptedPayload {
+  accepted: Boolean
+}
+
+type Address {
+  city: String
+  company: String
+  countryCode: CountryCode
+  firstName: String
+  lastName: String
+  line1: String
+  line2: String
+  phone: String
+  postalCode: String
+  region: String
+  regionCode: String
+}
+
+input AddressInput {
+  city: String!
+  company: String
+  countryCode: CountryCode!
+  firstName: String!
+  lastName: String!
+  line1: String!
+  line2: String
+  phone: String
+  postalCode: String!
+  region: String
+  regionCode: String
+}
+
+type ApiKey implements Node {
+  createdAt: DateTime
+  expiresAt: DateTime
+  id: ID!
+  lastUsedAt: DateTime
+  name: String
+  permissions: [String!]
+
+  """Identifies the key in logs; the secret is never shown again."""
+  prefix: String
+  revokedAt: DateTime
+}
+
+type ApiKeyCreatePayload {
+  apiKey: ApiKey
+
+  """Shown once. Send as `Authorization: Bearer <secret>`."""
+  secret: String
+}
+
+union ApiKeyCreateResult = ApiKeyCreatePayload | AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type ApiKeyPayload {
+  apiKey: ApiKey
+}
+
+union ApiKeyRevokeResult = ApiKeyPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+type AppliedDiscount {
+  amount: Money
+  couponCode: String
+  name: String
+}
+
+type AttributeDefinition implements Node {
+  code: String
+  id: ID!
+  isFilterable: Boolean
+  isLocalized: Boolean
+  isRequired: Boolean
+  isSearchable: Boolean
+  label: String
+  labels: [LocalizedString!]
+  options: [AttributeOption!]
+  position: Int
+  type: AttributeType
+  unit: String
+}
+
+union AttributeDefinitionCreateResult = AttributeDefinitionPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+union AttributeDefinitionDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+input AttributeDefinitionInput {
+  code: String!
+  isFilterable: Boolean
+  isLocalized: Boolean
+  isRequired: Boolean
+  isSearchable: Boolean
+  labels: [LocalizedStringInput!]!
+  options: [AttributeOptionInput!]
+  position: Int
+  type: AttributeType!
+  unit: String
+}
+
+type AttributeDefinitionPayload {
+  attributeDefinition: AttributeDefinition
+}
+
+"""Code and type are fixed once created."""
+input AttributeDefinitionUpdateInput {
+  isFilterable: Boolean
+  isRequired: Boolean
+  isSearchable: Boolean
+  labels: [LocalizedStringInput!]
+  options: [AttributeOptionInput!]
+  position: Int
+  unit: String
+}
+
+union AttributeDefinitionUpdateResult = AttributeDefinitionPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+input AttributeFilterInput {
+  code: String!
+  values: [String!]!
+}
+
+input AttributeInPredicateInput {
+  code: String!
+  values: [String!]!
+}
+
+type AttributeOption {
+  code: String
+  label: String
+  labels: [LocalizedString!]
+  swatch: String
+}
+
+input AttributeOptionInput {
+  code: String!
+  labels: [LocalizedStringInput!]!
+  swatch: String
+}
+
+enum AttributeType {
+  BOOLEAN
+  DATE
+  MULTISELECT
+  NUMBER
+  RICH_TEXT
+  SELECT
+  TEXT
+}
+
+"""
+A value matching the attribute's type. Exactly one field; `clear: true` removes the value.
+"""
+input AttributeValueData @oneOf {
+  boolean: Boolean
+  clear: Boolean
+
+  """YYYY-MM-DD."""
+  date: String
+  localizedText: [LocalizedStringInput!]
+  number: Float
+
+  """Option code for select attributes."""
+  option: String
+
+  """Option codes for multiselect attributes."""
+  options: [String!]
+  text: String
+}
+
+input AttributeValueInput {
+  code: String!
+  value: AttributeValueData!
+}
+
+enum AuditActorType {
+  """A sign-in attempt that did not reach an account."""
+  ANONYMOUS
+  API_KEY
+  STAFF
+}
+
+"""
+One admin mutation or sign-in attempt: who, what, on which object, and how it ended.
+"""
+type AuditEntry {
+  """Email or key name at the time, kept even if the actor is deleted."""
+  actorLabel: String
+  actorType: AuditActorType
+  apiKey: ApiKey
+  createdAt: DateTime
+  errorCode: String
+  id: ID
+
+  """Arguments as sent, with secrets redacted."""
+  input: JSON
+  ip: String
+
+  """Mutation name, e.g. productUpdate."""
+  operation: String
+  operationName: String
+  outcome: AuditOutcome
+  staffUser: StaffUser
+
+  """Global id of the affected object."""
+  targetId: ID
+  targetType: String
+  userAgent: String
+}
+
+input AuditLogFilter {
+  """A StaffUser or ApiKey id."""
+  actorId: ID
+  operation: String
+  outcome: AuditOutcome
+
+  """
+  Part of the operation name (e.g. refund) or of the actor's email or key name.
+  """
+  search: String
+  since: DateTime
+
+  """Global id of an affected object."""
+  targetId: ID
+  until: DateTime
+}
+
+enum AuditOutcome {
+  ERROR
+  SUCCESS
+}
+
+type AuthenticationError implements Error {
+  code: ErrorCode
+  message: String
+}
+
+type BulkDeletePayload {
+  deletedIds: [ID!]
+}
+
+input BuyXGetYActionInput {
+  buyQuantity: Int!
+  getQuantity: Int!
+
+  """Default 100 (free)."""
+  percent: Float
+  target: LinePredicateInput
+}
+
+enum CaptureMode {
+  """Capture later (on shipment)."""
+  AUTHORIZE
+
+  """Capture at checkout."""
+  AUTHORIZE_CAPTURE
+}
+
+type CartCoupon {
+  applied: Boolean
+  code: String
+
+  """Why the coupon currently gives no discount."""
+  reason: String
+}
+
+type CartLineIssue {
+  code: CartLineIssueCode
+  message: String
+}
+
+enum CartLineIssueCode {
+  INSUFFICIENT_STOCK
+  NO_PRICE
+  OUT_OF_STOCK
+  UNAVAILABLE
+}
+
+type CartNotReadyError implements Error {
+  code: ErrorCode
+
+  """
+  The same, field by field. Paths follow the storefront's cartUpdate input: ["shippingAddress", "address", "postalCode"] is a postal code still to give.
+  """
+  fieldErrors: [FieldError!]
+  message: String
+  missing: [CartRequirement!]
+}
+
+"""Something a cart still needs before it can be checked out."""
+enum CartRequirement {
+  BILLING_ADDRESS
+  EMAIL
+  LINES
+
+  """A line is unavailable, unpriced or short on stock."""
+  LINE_ISSUES
+  PAYMENT_METHOD
+  SHIPPING_ADDRESS
+  SHIPPING_METHOD
+}
+
+type Category implements Node {
+  """Root first, for breadcrumbs. Excludes this category."""
+  ancestors: [Category!]
+  children: [Category!]
+  depth: Int
+  description: String
+  id: ID!
+  isActive: Boolean
+
+  """
+  The category's listing as the merchandising board shows it: pinned products in order, then hidden ones, then the rest newest first (the FEATURED sort). Covers products in the category or below it, drafts included, archived ones not.
+  """
+  merchandising(
+    """Up to 500; default 250."""
+    first: Int
+  ): CategoryMerchandising
+  name: String
+  parent: Category
+
+  """Slugs from the root, e.g. "men/mens-shirts"."""
+  path: String
+  position: Int
+  products(
+    after: String
+    before: String
+    filter: ProductFilter
+    first: Int
+    last: Int
+
+    """Full-text search with prefix matching, e.g. "trail run"."""
+    query: String
+
+    """
+    Defaults to RELEVANCE with a query, then to FEATURED in a category's listing, otherwise NEWEST.
+    """
+    sort: ProductSortInput
+  ): ProductConnection
+
+  """
+  This category's own sections, to render with the category as data where its template places the category sections component. Null when it has none. Drafts appear only with a preview token.
+  """
+  sections: Page
+  slug: String
+
+  """
+  The page builder template for this category's page: the one assigned to the category, else the default. Render its content with the category as data. Null means none: use your built-in layout. Drafts appear only with a preview token.
+  """
+  template: Page
+  templateMatch(
+    """
+    Only count published templates: what visitors see now. By default unpublished ones count too.
+    """
+    live: Boolean
+  ): TemplateMatch
+  translations: [CategoryTranslation!]
+}
+
+union CategoryCreateResult = AuthenticationError | CategoryPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union CategoryDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input CategoryInput {
+  isActive: Boolean
+  parentId: ID
+
+  """
+  Index among its siblings (0 is first); default last. Siblings are renumbered.
+  """
+  position: Int
+  translations: [CategoryTranslationInput!]!
+}
+
+type CategoryMerchandising {
+  items: [CategoryMerchandisingItem!]
+
+  """Products in the listing; `items` stops at `first`."""
+  totalCount: Int
+}
+
+input CategoryMerchandisingInput {
+  """
+  Left out of this category's listing, in every sort. Its parents' listings have their own.
+  """
+  hidden: [ID!]!
+
+  """Shown first, in this order. At most 250."""
+  pinned: [ID!]!
+}
+
+type CategoryMerchandisingItem {
+  hidden: Boolean
+  pinned: Boolean
+  product: Product
+}
+
+union CategoryMerchandisingUpdateResult = AuthenticationError | CategoryPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union CategoryMoveResult = AuthenticationError | CategoryPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type CategoryPayload {
+  category: Category
+}
+
+type CategoryTranslation {
+  description: String
+  locale: LocaleCode
+  name: String
+  slug: String
+}
+
+input CategoryTranslationInput {
+  description: String
+  locale: LocaleCode!
+  name: String!
+  slug: String
+}
+
+input CategoryUpdateInput {
+  isActive: Boolean
+
+  """New index among its siblings (0 is first); siblings are renumbered."""
+  position: Int
+  translations: [CategoryTranslationInput!]
+}
+
+union CategoryUpdateResult = AuthenticationError | CategoryPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type Channel implements Node {
+  code: String
+
+  """Countries this channel sells to."""
+  countries: [Country!]
+  currencies: [CurrencyCode!]
+  defaultCurrency: CurrencyCode
+  defaultLocale: LocaleCode
+  id: ID!
+  isActive: Boolean
+  locales: [LocaleCode!]
+  name: String
+  orderNumberPrefix: String
+  pricesIncludeTax: Boolean
+  shippingTaxClass: TaxClass
+  stock: Stock
+}
+
+union ChannelCreateResult = AuthenticationError | ChannelPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input ChannelInput {
+  code: String!
+  countries: [CountryCode!]!
+  currencies: [CurrencyCode!]!
+  defaultCurrency: CurrencyCode!
+  defaultLocale: LocaleCode!
+  isActive: Boolean
+  locales: [LocaleCode!]!
+  name: String!
+  orderNumberPrefix: String
+  pricesIncludeTax: Boolean
+  shippingTaxClassId: ID
+  stockId: ID
+}
+
+type ChannelPayload {
+  channel: Channel
+}
+
+input ChannelUpdateInput {
+  countries: [CountryCode!]
+  currencies: [CurrencyCode!]
+  defaultCurrency: CurrencyCode
+  defaultLocale: LocaleCode
+  isActive: Boolean
+  locales: [LocaleCode!]
+  name: String
+  orderNumberPrefix: String
+  pricesIncludeTax: Boolean
+  shippingTaxClassId: ID
+  stockId: ID
+}
+
+union ChannelUpdateResult = AuthenticationError | ChannelPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+enum ComparisonOperator {
+  EQ
+  GT
+  GTE
+  LT
+  LTE
+}
+
+"""A component or content type in the page builder's library."""
+type Component implements Node {
+  """Stable identifier; pages and frontends refer to components by code."""
+  code: String
+  createdAt: DateTime
+
+  """The definition as componentsSync accepts it."""
+  definition: JSON
+  description: String
+
+  """
+  Field definitions: { key, type, label, required, localized, options, allowedComponents, fields, … }.
+  """
+  fields: JSON
+  groupName: String
+
+  """A lucide icon name."""
+  icon: String
+  id: ID!
+  kind: ComponentKind
+  name: String
+  previewImageUrl: String
+  revision: Int
+  routable: Boolean
+
+  """
+  Content types only: its pages are one product's or category's own sections, which templates show where they place a sections component.
+  """
+  sectionsFor: TemplateFor
+  singleton: Boolean
+  source: ComponentSource
+
+  """
+  Content types: its pages are product or category templates. Components: shows that object's data, so it only fits those templates (and that kind's sections).
+  """
+  templateFor: TemplateFor
+  updatedAt: DateTime
+
+  """Pages whose draft or published version uses it."""
+  usageCount: Int
+  variations: JSON
+}
+
+union ComponentCreateResult = AuthenticationError | ComponentPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union ComponentDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+"""
+A definition. fields and variations take the JSON shapes Component returns.
+"""
+input ComponentInput {
+  """Required when creating; fixed afterwards."""
+  code: String
+  description: String
+  fields: JSON
+  groupName: String
+  icon: String
+
+  """Required when creating; fixed afterwards."""
+  kind: ComponentKind
+  name: String
+  previewImageUrl: String
+  routable: Boolean
+
+  """
+  Content types: its pages are one product's or category's own sections, which templates show where they place a sections component. Fixed while pages use it.
+  """
+  sectionsFor: TemplateFor
+  singleton: Boolean
+
+  """
+  Content types: make its pages product or category templates. Components: shows that object's data. Fixed while pages use it.
+  """
+  templateFor: TemplateFor
+  variations: JSON
+}
+
+enum ComponentKind {
+  """Nests inside a content type's or component's blocks fields."""
+  COMPONENT
+
+  """The root of a page, e.g. a landing page or the site header."""
+  CONTENT_TYPE
+}
+
+type ComponentPayload {
+  component: Component
+}
+
+enum ComponentSource {
+  """Created or last edited in the admin."""
+  ADMIN
+
+  """Deployed from a frontend's code with componentsSync."""
+  CODE
+}
+
+union ComponentUpdateResult = AuthenticationError | ComponentPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type ComponentsSyncPayload {
+  created: [String!]
+  removed: [String!]
+  unchanged: [String!]
+  updated: [String!]
+}
+
+union ComponentsSyncResult = AuthenticationError | ComponentsSyncPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type ConflictError implements Error {
+  code: ErrorCode
+  message: String
+}
+
+type Country {
+  code: CountryCode
+
+  """In the request locale."""
+  name: String
+}
+
+"""ISO 3166-1 alpha-2 country code, e.g. DE."""
+scalar CountryCode
+
+type Coupon {
+  code: String
+  expiresAt: DateTime
+  id: ID
+  timesUsed: Int
+  usageLimit: Int
+}
+
+type CouponsDeletePayload {
+  deletedIds: [ID!]
+}
+
+union CouponsDeleteResult = AuthenticationError | CouponsDeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type CouponsGeneratePayload {
+  coupons: [Coupon!]
+}
+
+union CouponsGenerateResult = AuthenticationError | CouponsGeneratePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+"""ISO 4217 currency code, e.g. USD."""
+scalar CurrencyCode
+
+type Customer implements Node {
+  acceptsMarketing: Boolean
+  addresses: [CustomerAddress!]
+  createdAt: DateTime
+
+  """YYYY-MM-DD."""
+  dateOfBirth: String
+  defaultBillingAddress: CustomerAddress
+  defaultShippingAddress: CustomerAddress
+  email: EmailAddress
+  emailVerifiedAt: DateTime
+  firstName: String
+  group: CustomerGroup
+  id: ID!
+  isActive: Boolean
+  lastLoginAt: DateTime
+  lastName: String
+  metadata: JSON
+  note: String
+
+  """Newest first."""
+  orders(after: String, before: String, first: Int, last: Int, status: OrderStatus): CustomerOrdersConnection
+  phone: String
+  updatedAt: DateTime
+}
+
+type CustomerAddress implements Node {
+  address: Address
+  id: ID!
+  isDefaultBilling: Boolean
+  isDefaultShipping: Boolean
+}
+
+union CustomerAddressCreateResult = AuthenticationError | CustomerAddressPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union CustomerAddressDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input CustomerAddressInput {
+  address: AddressInput!
+  isDefaultBilling: Boolean
+  isDefaultShipping: Boolean
+}
+
+type CustomerAddressPayload {
+  address: CustomerAddress
+  customer: Customer
+}
+
+union CustomerAddressUpdateResult = AuthenticationError | CustomerAddressPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input CustomerCreateInput {
+  acceptsMarketing: Boolean
+  email: EmailAddress!
+  firstName: String!
+  groupId: ID
+  lastName: String!
+  note: String
+
+  """Omit to let the customer set one via password reset."""
+  password: String
+  phone: String
+}
+
+union CustomerCreateResult = AuthenticationError | CustomerPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union CustomerDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type CustomerGroup implements Node {
+  code: String
+  id: ID!
+  name: String
+  taxClass: TaxClass
+}
+
+union CustomerGroupCreateResult = AuthenticationError | CustomerGroupPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union CustomerGroupDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type CustomerGroupPayload {
+  customerGroup: CustomerGroup
+}
+
+union CustomerGroupUpdateResult = AuthenticationError | CustomerGroupPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type CustomerOrdersConnection {
+  edges: [CustomerOrdersConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type CustomerOrdersConnectionEdge {
+  cursor: String!
+  node: Order
+}
+
+union CustomerPasswordResetSendResult = AuthenticationError | CustomerPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type CustomerPayload {
+  customer: Customer
+}
+
+type CustomerSalesRow {
+  currencyCode: CurrencyCode
+
+  """Null for guest checkouts."""
+  customer: Customer
+  email: EmailAddress
+  lastOrderAt: DateTime
+  orders: Int
+  total: Money
+}
+
+union CustomerSessionsRevokeResult = AuthenticationError | CustomerPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input CustomerUpdateInput {
+  acceptsMarketing: Boolean
+  dateOfBirth: String
+  email: EmailAddress
+  firstName: String
+  groupId: ID
+  isActive: Boolean
+  lastName: String
+  note: String
+  phone: String
+}
+
+union CustomerUpdateResult = AuthenticationError | CustomerPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+"""
+Live figures for the range, with the equally long range before it for comparison.
+"""
+type Dashboard {
+  attention: DashboardAttention
+  from: DateTime
+  newCustomers: Int
+  previousNewCustomers: Int
+  previousTotals: [SalesFigures!]
+
+  """Daily figures per currency."""
+  series: [SalesPeriod!]
+  to: DateTime
+  topProducts(first: Int = 5): [ProductSalesRow!]
+  totals: [SalesFigures!]
+}
+
+"""Work waiting for someone."""
+type DashboardAttention {
+  """Open, paid or authorized orders with items left to ship."""
+  awaitingFulfillment: Int
+
+  """Open orders whose payment is pending or authorized."""
+  awaitingPayment: Int
+
+  """Deliveries that gave up retrying."""
+  failedWebhookDeliveries: Int
+  lowStockVariants: Int
+}
+
+"""Half-open: from ≤ t < to. Compute local-day boundaries on the client."""
+input DateRangeInput {
+  from: DateTime!
+  to: DateTime!
+}
+
+"""ISO 8601 date-time in UTC."""
+scalar DateTime
+
+"""
+Exact decimal amount as a string, e.g. "19.99". Money never uses floats.
+"""
+scalar Decimal
+
+type DeletePayload {
+  deletedId: ID
+}
+
+type DocumentLine {
+  orderLine: OrderLine
+  quantity: Int
+}
+
+"""An email address."""
+scalar EmailAddress
+
+"""
+An email the email plugin sent, failed to send, or only logged. Kept 30 days.
+"""
+type EmailMessage {
+  createdAt: DateTime
+  error: String
+  html: String
+  id: ID
+  orderId: ID
+  orderNumber: String
+
+  """log, resend or postmark."""
+  provider: String
+
+  """The provider's id for the message, to look it up there."""
+  providerMessageId: String
+  status: EmailMessageStatus
+  subject: String
+  template: EmailTemplate
+  text: String
+  to: String
+}
+
+enum EmailMessageStatus {
+  """Refused or unreachable; `error` says why. Event emails are retried."""
+  FAILED
+
+  """Recorded by the log transport, not sent."""
+  LOGGED
+
+  """Accepted by Resend or Postmark."""
+  SENT
+}
+
+"""A rendered template: show `html` in a sandboxed iframe."""
+type EmailPreview {
+  html: String
+  subject: String
+  text: String
+}
+
+type EmailSendTestPayload {
+  """Its status says how it went: FAILED carries the provider's error."""
+  emailMessage: EmailMessage
+}
+
+union EmailSendTestResult = AuthenticationError | EmailSendTestPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+enum EmailTemplate {
+  """
+  The reset link a customer asked for (customer.password_reset_requested).
+  """
+  CUSTOMER_PASSWORD_RESET
+
+  """To the low stock recipients (inventory.level_changed)."""
+  LOW_STOCK
+
+  """To the customer when an order is canceled (order.canceled)."""
+  ORDER_CANCELED
+
+  """To the customer when an order is placed (order.placed)."""
+  ORDER_CONFIRMATION
+
+  """To the customer for each refund (order.refunded)."""
+  ORDER_REFUNDED
+
+  """
+  To the customer for each shipment, with tracking links (order.fulfilled).
+  """
+  ORDER_SHIPPED
+
+  """To the new order notification addresses (order.placed)."""
+  STAFF_NEW_ORDER
+
+  """
+  The reset link a staff member asked for (staff.password_reset_requested).
+  """
+  STAFF_PASSWORD_RESET
+
+  """Sent from the admin (emailSendTest)."""
+  TEST
+}
+
+"""
+Implemented by every expected failure. Query `... on Error { code message }` to handle any of them.
+"""
+interface Error {
+  code: ErrorCode
+  message: String
+}
+
+"""Stable machine-readable error codes."""
+enum ErrorCode {
+  CART_NOT_READY
+  CONFLICT
+  COUPON_NOT_APPLICABLE
+  INSUFFICIENT_STOCK
+  INVALID_STATE
+  NOT_FOUND
+  PAYMENT_DECLINED
+  PERMISSION_DENIED
+  UNAUTHENTICATED
+  VALIDATION_FAILED
+}
+
+"""1 unit of the base currency in the quote currency."""
+type ExchangeRate {
+  baseCurrency: CurrencyCode
+  quoteCurrency: CurrencyCode
+  rate: Float
+  updatedAt: DateTime
+}
+
+union ExchangeRateDeleteResult = AuthenticationError | ExchangeRatePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type ExchangeRatePayload {
+  baseCurrency: CurrencyCode
+  quoteCurrency: CurrencyCode
+  rate: Float
+}
+
+union ExchangeRateSetResult = AuthenticationError | ExchangeRatePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type Facet {
+  attribute: AttributeDefinition
+  values: [FacetValue!]
+}
+
+type FacetValue {
+  """Products matching if this value were (also) selected."""
+  count: Int
+  label: String
+  selected: Boolean
+  swatch: String
+
+  """Pass this in `filter.attributes` to select it."""
+  value: String
+}
+
+"""One invalid input field, addressed by its path from the argument root."""
+type FieldError {
+  message: String
+  path: [String!]
+}
+
+input FixedOffCartActionInput {
+  amounts: [MoneyByCurrencyInput!]!
+  target: LinePredicateInput
+}
+
+input FixedOffEachActionInput {
+  amounts: [MoneyByCurrencyInput!]!
+  target: LinePredicateInput
+}
+
+input FlatRateInput {
+  perItem: Boolean
+  prices: [MoneyByCurrencyInput!]!
+}
+
+input FreeShippingInput {
+  minimumSubtotals: [MoneyByCurrencyInput!]!
+}
+
+"""A storefront app the builder previews in and deploys to."""
+type Frontend implements Node {
+  defaultChannel: Channel
+
+  """The deploy hook's host; the URL itself is a secret."""
+  deployHookHost: String
+  hasDeployHook: Boolean
+  id: ID!
+  isDefault: Boolean
+  lastDeployAt: DateTime
+  lastDeployStatus: String
+  name: String
+
+  """Route that turns on draft mode, e.g. /api/draft."""
+  previewPath: String
+
+  """Route that receives signed publish and catalog events."""
+  revalidatePath: String
+
+  """Base URL, e.g. https://shop.example.com."""
+  url: String
+  webhookSubscription: WebhookSubscription
+}
+
+union FrontendCreateResult = AuthenticationError | FrontendPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union FrontendDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union FrontendDeployResult = AuthenticationError | FrontendPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input FrontendInput {
+  defaultChannelId: ID
+
+  """Null removes the deploy hook."""
+  deployHookUrl: String
+  isDefault: Boolean
+  name: String
+  previewPath: String
+
+  """Null turns revalidation off."""
+  revalidatePath: String
+  url: String
+}
+
+type FrontendPayload {
+  frontend: Frontend
+
+  """
+  Shown once, when revalidation is first set up: the storefront verifies webhook signatures with it.
+  """
+  revalidateSecret: String
+}
+
+union FrontendUpdateResult = AuthenticationError | FrontendPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+"""A shipment of some or all of an order's items."""
+type Fulfillment {
+  createdAt: DateTime
+  id: ID
+  lines: [DocumentLine!]
+  location: StockLocation
+  number: String
+
+  """The label a shipping provider booked (orderFulfill createShipment)."""
+  shipment: FulfillmentShipment
+  status: String
+  tracking: [TrackingNumber!]
+}
+
+"""
+What a shipping provider booked for a fulfilment: the label and its cost.
+"""
+type FulfillmentShipment {
+  """What the label cost the store."""
+  cost: Money
+  labelUrl: String
+
+  """The shipping provider's code."""
+  provider: String
+  providerTitle: String
+}
+
+enum FulfillmentStatus {
+  FULFILLED
+  PARTIALLY_FULFILLED
+  UNFULFILLED
+}
+
+type InsufficientStockError implements Error {
+  available: Int
+  code: ErrorCode
+  message: String
+  requested: Int
+  sku: String
+  variantId: ID
+}
+
+type InvalidStateError implements Error {
+  code: ErrorCode
+  message: String
+}
+
+"""An invoice: a captured payment."""
+type Invoice {
+  amount: Money
+  createdAt: DateTime
+  id: ID
+  number: String
+}
+
+"""Arbitrary JSON value."""
+scalar JSON
+
+input LineMatchesConditionInput {
+  """Units across matching lines; default 1."""
+  minQuantity: Int
+  predicate: LinePredicateInput!
+}
+
+"""Which cart lines a condition or action looks at. Exactly one field."""
+input LinePredicateInput @oneOf {
+  all: [LinePredicateInput!]
+  any: [LinePredicateInput!]
+  attributeIn: AttributeInPredicateInput
+
+  """Matches descendants too."""
+  categoryIn: [ID!]
+  productIn: [ID!]
+  skuIn: [String!]
+}
+
+"""BCP 47 locale, e.g. de-DE."""
+scalar LocaleCode
+
+"""
+The scope this request runs in, set with @inContext or the X-Channel / Accept-Language / X-Currency headers.
+"""
+type Localization {
+  channel: Channel
+  currencyCode: CurrencyCode
+  locale: LocaleCode
+}
+
+type LocalizedString {
+  locale: LocaleCode
+  value: String
+}
+
+input LocalizedStringInput {
+  locale: LocaleCode!
+  value: String!
+}
+
+union LogoutResult = AcceptedPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+type LowStockRow {
+  """At the location, or across all locations."""
+  onHand: Int
+  variant: ProductVariant
+}
+
+type Media implements Node {
+  alt: String
+
+  """Alt text in every locale."""
+  alts: [LocalizedString!]
+  id: ID!
+  kind: MediaKind
+  position: Int
+  url: String
+  variant: ProductVariant
+}
+
+"""
+An image or video in the media library. Use its url in product media and page content; usage shows where it is used.
+"""
+type MediaAsset implements Node {
+  """Alt text in the request locale."""
+  alt: String
+
+  """Alt text in every locale."""
+  alts: [LocalizedString!]
+
+  """Detected from the file's bytes."""
+  contentType: String
+  createdAt: DateTime
+  createdBy: StaffUser
+
+  """The name it was uploaded with, or renamed to."""
+  filename: String
+  height: Int
+  id: ID!
+  kind: MediaKind
+
+  """In bytes."""
+  size: Int
+
+  """The store the file was uploaded to."""
+  storage: MediaStorageProvider
+
+  """
+  Where the file is served from. Stable: keys are never reused, so it can be cached for a year.
+  """
+  url: String
+
+  """
+  Products whose media list has this URL, and pages whose draft or published content mentions it. Deleting is refused while this is not empty.
+  """
+  usage: [MediaUsage!]
+
+  """
+  In pixels, as displayed (EXIF rotation applied). Read from the file for images.
+  """
+  width: Int
+}
+
+type MediaAssetConnection {
+  edges: [MediaAssetEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+input MediaAssetCreateInput {
+  """Alt text per locale."""
+  alts: [LocalizedStringInput!]
+  filename: String!
+
+  """Used only when the file's own dimensions cannot be read (e.g. videos)."""
+  height: Int
+
+  """MediaUpload.key, after the file has been uploaded."""
+  key: String!
+
+  """Used only when the file's own dimensions cannot be read (e.g. videos)."""
+  width: Int
+}
+
+union MediaAssetCreateResult = AuthenticationError | InvalidStateError | MediaAssetPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union MediaAssetDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type MediaAssetEdge {
+  cursor: String!
+  node: MediaAsset
+}
+
+type MediaAssetPayload {
+  asset: MediaAsset
+}
+
+input MediaAssetUpdateInput {
+  """
+  Replaces the alt text in every locale; an empty value removes a locale.
+  """
+  alts: [LocalizedStringInput!]
+
+  """Renames it in the library; the URL stays the same."""
+  filename: String
+}
+
+union MediaAssetUpdateResult = AuthenticationError | MediaAssetPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+"""How uploads work on this server."""
+type MediaStorageInfo {
+  """JPEG, PNG, GIF, WebP, AVIF and MP4. Never SVG, which can carry script."""
+  allowedContentTypes: [String!]
+
+  """The largest file accepted, in bytes."""
+  maxBytes: Int
+  provider: MediaStorageProvider
+}
+
+"""Where media files are stored."""
+enum MediaStorageProvider {
+  """
+  Files on the API server's disk, served at /media/. For development, Docker and single servers.
+  """
+  LOCAL
+
+  """
+  S3-compatible object storage: AWS S3, Cloudflare R2, Supabase Storage, MinIO.
+  """
+  S3
+
+  """A Vercel Blob store."""
+  VERCEL_BLOB
+}
+
+"""
+Where to upload a file, straight to storage. LOCAL and S3: send `method` to `url` with `headers` and the file as the body. VERCEL_BLOB: `put(pathname, file, { access: "public", token: clientToken, contentType, multipart })` from @vercel/blob/client. Then call mediaAssetCreate with `key`.
+"""
+type MediaUpload {
+  """
+  VERCEL_BLOB: the token for put() from @vercel/blob/client, limited to this pathname, type and size.
+  """
+  clientToken: String
+
+  """When the url or clientToken stops working."""
+  expiresAt: DateTime
+
+  """
+  Headers to send with the PUT, e.g. { "Content-Type": "image/png" }; they are part of the signature. The body must be exactly the declared size.
+  """
+  headers: JSON
+
+  """Pass to mediaAssetCreate once the upload has finished."""
+  key: String
+
+  """The largest file accepted."""
+  maxBytes: Int
+
+  """PUT."""
+  method: String
+
+  """VERCEL_BLOB: the pathname to put to."""
+  pathname: String
+  provider: MediaStorageProvider
+
+  """Where the file will be served from."""
+  publicUrl: String
+
+  """
+  LOCAL: a path on this API, with a signed token (resolve it against the API's URL). S3: a presigned URL. Null for VERCEL_BLOB.
+  """
+  url: String
+}
+
+input MediaUploadCreateInput {
+  """
+  One of MediaStorageInfo.allowedContentTypes, e.g. File.type in a browser.
+  """
+  contentType: String!
+
+  """The file's name; it becomes part of the URL, slugified."""
+  filename: String!
+
+  """In bytes; the upload must be exactly this size."""
+  size: Int!
+}
+
+union MediaUploadCreateResult = AuthenticationError | InvalidStateError | MediaUploadPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type MediaUploadPayload {
+  upload: MediaUpload
+}
+
+"""Somewhere an asset's URL is used."""
+type MediaUsage {
+  """Global id of the product or page."""
+  id: ID
+  kind: MediaUsageKind
+
+  """The product's name or the page's title, in the request locale."""
+  title: String
+}
+
+enum MediaUsageKind {
+  """In a builder page's draft or published content."""
+  PAGE
+
+  """In the product's media."""
+  PRODUCT
+}
+
+"""An exact amount in a currency."""
+type Money {
+  amount: Decimal
+  currencyCode: CurrencyCode
+
+  """Formatted for the request locale, e.g. "19,99 €"."""
+  formatted: String
+}
+
+input MoneyByCurrencyInput {
+  amount: Decimal!
+  currencyCode: CurrencyCode!
+}
+
+"""
+Entry point for writes. Every mutation returns a result union: the payload or a typed error.
+"""
+type Mutation {
+  """
+  Least-privilege credential for integrations (ERP, PIM, fulfillment). Staff users only, with permissions they hold themselves.
+  """
+  apiKeyCreate(expiresAt: DateTime, name: String!, permissions: [String!]!): ApiKeyCreateResult
+  apiKeyRevoke(id: ID!): ApiKeyRevokeResult
+  attributeDefinitionCreate(input: AttributeDefinitionInput!): AttributeDefinitionCreateResult
+
+  """Fails while a product type uses the attribute."""
+  attributeDefinitionDelete(id: ID!): AttributeDefinitionDeleteResult
+  attributeDefinitionUpdate(id: ID!, input: AttributeDefinitionUpdateInput!): AttributeDefinitionUpdateResult
+  categoryCreate(input: CategoryInput!): CategoryCreateResult
+
+  """
+  Deletes the category and its subtree; products stay, without these assignments.
+  """
+  categoryDelete(id: ID!): CategoryDeleteResult
+
+  """
+  Replace the listing's pinned and hidden products. Products in neither list go back to the automatic order, newest first. Each must be in the category or below it, and named once.
+  """
+  categoryMerchandisingUpdate(id: ID!, input: CategoryMerchandisingInput!): CategoryMerchandisingUpdateResult
+
+  """
+  Re-parent a category and its subtree (null parent makes it a root), or reorder it within its parent.
+  """
+  categoryMove(
+    id: ID!
+    parentId: ID
+
+    """
+    Index among the new siblings (0 is first); default last. Siblings are renumbered.
+    """
+    position: Int
+  ): CategoryMoveResult
+  categoryUpdate(id: ID!, input: CategoryUpdateInput!): CategoryUpdateResult
+  channelCreate(input: ChannelInput!): ChannelCreateResult
+  channelUpdate(id: ID!, input: ChannelUpdateInput!): ChannelUpdateResult
+  componentCreate(input: ComponentInput!): ComponentCreateResult
+
+  """Refused while pages use the component or other components allow it."""
+  componentDelete(id: ID!): ComponentDeleteResult
+  componentUpdate(id: ID!, input: ComponentInput!): ComponentUpdateResult
+
+  """
+  Deploy component definitions from a frontend: upserted by code and marked as managed in code. prune deletes code-managed components not in the set (refused while used).
+  """
+  componentsSync(definitions: JSON!, prune: Boolean): ComponentsSyncResult
+
+  """Delete coupon codes. Past orders keep the code they used."""
+  couponsDelete(ids: [ID!]!): CouponsDeleteResult
+
+  """Bulk-generate unique single-promotion coupon codes."""
+  couponsGenerate(
+    expiresAt: DateTime
+
+    """Random part length, 6–32 (default 10)."""
+    length: Int
+    prefix: String
+    promotionId: ID!
+    quantity: Int!
+
+    """Uses per code."""
+    usageLimit: Int
+  ): CouponsGenerateResult
+
+  """
+  Storefront: the signed-in customer's address book. Admin: any customer's, by customerId.
+  """
+  customerAddressCreate(customerId: ID, input: CustomerAddressInput!): CustomerAddressCreateResult
+  customerAddressDelete(customerId: ID, id: ID!): CustomerAddressDeleteResult
+  customerAddressUpdate(customerId: ID, id: ID!, input: CustomerAddressInput!): CustomerAddressUpdateResult
+  customerCreate(input: CustomerCreateInput!): CustomerCreateResult
+
+  """
+  Delete the account. Its orders are kept, detached from it; carts and sessions are removed.
+  """
+  customerDelete(id: ID!): CustomerDeleteResult
+  customerGroupCreate(code: String!, name: String!, taxClassId: ID): CustomerGroupCreateResult
+
+  """Members move to the default group; the group's prices are deleted."""
+  customerGroupDelete(id: ID!): CustomerGroupDeleteResult
+  customerGroupUpdate(id: ID!, name: String, taxClassId: ID): CustomerGroupUpdateResult
+
+  """
+  Email the customer a reset link (emits customer.password_reset_requested, which only plugins receive).
+  """
+  customerPasswordResetSend(id: ID!): CustomerPasswordResetSendResult
+
+  """Sign the customer out on every device."""
+  customerSessionsRevoke(id: ID!): CustomerSessionsRevokeResult
+
+  """
+  Storefront: update the signed-in customer. Admin: update any customer by id.
+  """
+  customerUpdate(id: ID, input: CustomerUpdateInput!): CustomerUpdateResult
+
+  """
+  Send a short test email with the active transport (the log transport only records it).
+  """
+  emailSendTest(to: EmailAddress!): EmailSendTestResult
+  exchangeRateDelete(baseCurrency: CurrencyCode!, quoteCurrency: CurrencyCode!): ExchangeRateDeleteResult
+
+  """
+  Rate used to convert default-currency prices when a variant has no price in the requested currency.
+  """
+  exchangeRateSet(baseCurrency: CurrencyCode!, quoteCurrency: CurrencyCode!, rate: Float!): ExchangeRateSetResult
+  frontendCreate(input: FrontendInput!): FrontendCreateResult
+  frontendDelete(id: ID!): FrontendDeleteResult
+
+  """
+  Call the storefront's deploy hook to rebuild a statically generated site. The result is in lastDeployStatus.
+  """
+  frontendDeploy(id: ID!): FrontendDeployResult
+  frontendUpdate(id: ID!, input: FrontendInput!): FrontendUpdateResult
+
+  """Revoke the refresh token and every token rotated from it."""
+  logout(refreshToken: String!): LogoutResult
+
+  """
+  Add an uploaded file to the library, reading its size and type from storage. A file that is too large, not an accepted type or not as declared is deleted and refused. Repeating a key returns the same asset.
+  """
+  mediaAssetCreate(input: MediaAssetCreateInput!): MediaAssetCreateResult
+
+  """
+  Delete the asset and its stored file. Refused while products or pages use it (see usage), unless force: true, which leaves them pointing at a missing file.
+  """
+  mediaAssetDelete(force: Boolean, id: ID!): MediaAssetDeleteResult
+  mediaAssetUpdate(id: ID!, input: MediaAssetUpdateInput!): MediaAssetUpdateResult
+
+  """
+  Check a file's type and size and get a short-lived target to upload it to, straight to storage (not through this API). Then call mediaAssetCreate.
+  """
+  mediaUploadCreate(input: MediaUploadCreateInput!): MediaUploadCreateResult
+
+  """
+  Cancel an unshipped, uncaptured order (customers: their own). Voids the authorization and releases reserved stock.
+  """
+  orderCancel(orderId: ID!, reason: String): OrderCancelResult
+
+  """Capture all or part of the outstanding amount and create an invoice."""
+  orderCapturePayment(
+    """Defaults to the outstanding amount."""
+    amount: Decimal
+    orderId: ID!
+  ): OrderCapturePaymentResult
+
+  """
+  Place an order for a customer or guest, through the same checkout as the storefront.
+  """
+  orderCreate(input: OrderDraftInput!): OrderCreateResult
+
+  """
+  Ship items: deducts stock at the location and turns the reservation into a shipment. With createShipment a provider books it first; if that fails, nothing ships (InvalidStateError).
+  """
+  orderFulfill(input: OrderFulfillInput, orderId: ID!): OrderFulfillResult
+  orderNoteAdd(message: String!, orderId: ID!): OrderNoteAddResult
+
+  """
+  Refund lines (prorated from what was paid) and/or shipping, up to the captured amount.
+  """
+  orderRefund(input: OrderRefundInput!, orderId: ID!): OrderRefundResult
+
+  """
+  Correct the addresses of an open order. The shipping address is fixed once anything has shipped.
+  """
+  orderUpdateAddresses(billingAddress: AddressInput, orderId: ID!, shippingAddress: AddressInput): OrderUpdateAddressesResult
+  pageCreate(input: PageCreateInput!): PageCreateResult
+
+  """Delete the page and its history; a published page goes offline."""
+  pageDelete(id: ID!): PageDeleteResult
+
+  """Replace the draft with the published version."""
+  pageDiscardDraft(id: ID!): PageDiscardDraftResult
+  pageDuplicate(id: ID!): PageDuplicateResult
+
+  """
+  Validate the draft (required fields, counts, path) and make it live. Pass version to publish only what you saw.
+  """
+  pagePublish(id: ID!, version: Int): PagePublishResult
+
+  """
+  Save the whole draft document. baseVersion is the version you loaded; a newer one means someone else saved first (ConflictError).
+  """
+  pageSaveDraft(baseVersion: Int!, document: JSON!, id: ID!): PageSaveDraftResult
+
+  """
+  Publish the draft at a time; null unschedules. The draft is checked now so the schedule does not fail later.
+  """
+  pageSchedule(at: DateTime, id: ID!): PageScheduleResult
+
+  """
+  Give one product or category its own sections: an empty draft page of the library's sections content type, shown where its template places a sections component. Returns existing sections unchanged. Edit and publish them like any page.
+  """
+  pageSectionsCreate(categoryId: ID, productId: ID): PageSectionsCreateResult
+
+  """Settings that apply immediately rather than on publish."""
+  pageSettingsUpdate(
+    """Empty means every channel."""
+    channelIds: [ID!]
+    id: ID!
+  ): PageSettingsUpdateResult
+
+  """
+  Give one product or category its own template: a draft copy of its current one (or an empty one), assigned to it. The page keeps its current template until the copy is published. Returns the existing one unchanged if it has one.
+  """
+  pageTemplateCustomize(categoryId: ID, productId: ID): PageTemplateCustomizeResult
+
+  """
+  Assign a template to products and categories, or make it the default. A published template takes over at once; a draft one when published, and visitors keep the current design until then.
+  """
+  pageTemplateTargetsUpdate(id: ID!, input: TemplateTargetsInput!): PageTemplateTargetsUpdateResult
+  pageUnpublish(id: ID!): PageUnpublishResult
+
+  """Load an old version into the draft; publish to make it live."""
+  pageVersionRestore(id: ID!, versionId: ID!): PageVersionRestoreResult
+
+  """Keep the current draft as a named version."""
+  pageVersionSave(id: ID!, label: String): PageVersionSaveResult
+  paymentMethodCreate(input: PaymentMethodInput!): PaymentMethodCreateResult
+  paymentMethodUpdate(id: ID!, input: PaymentMethodUpdateInput!): PaymentMethodUpdateResult
+
+  """
+  Test connection: the plugin checks its saved settings against the remote service (15 seconds at most). Works while disabled.
+  """
+  pluginCheck(name: String!): PluginCheckResult
+
+  """Make a failed or dead delivery due now."""
+  pluginDeliveryRetry(id: ID!): PluginDeliveryRetryResult
+
+  """
+  Run a task now, whatever its interval, and wait for it; a failure is reported in the task's lastError.
+  """
+  pluginTaskRun(name: String!, task: String!): PluginTaskRunResult
+
+  """
+  Enable or disable a plugin and change its settings. Field errors are at [input, settings, <key>].
+  """
+  pluginUpdate(input: PluginUpdateInput!, name: String!): PluginUpdateResult
+
+  """
+  A preview token for draft content and, given a page or path, the frontend URL to frame (default: the default frontend). A template's preview opens a product or category page rendered with it (see productId and categoryId).
+  """
+  previewSessionCreate(
+    """Show scheduled content as of this time."""
+    at: DateTime
+
+    """
+    Category templates: preview with this category. Default: one the template is assigned to, else the first category.
+    """
+    categoryId: ID
+    channelId: ID
+    frontendId: ID
+    locale: LocaleCode
+    pageId: ID
+    path: String
+
+    """
+    Product templates: preview with this product. Default: one the template is assigned to, else the newest product.
+    """
+    productId: ID
+  ): PreviewSessionCreateResult
+  productBulkDelete(ids: [ID!]!): ProductBulkDeleteResult
+
+  """
+  Set status, categories or channel listings on up to 500 products in one transaction.
+  """
+  productBulkUpdate(ids: [ID!]!, input: ProductBulkUpdateInput!): ProductBulkUpdateResult
+
+  """
+  Create a product with its variants, prices, stock, media, categories and channel listings in one transaction.
+  """
+  productCreate(input: ProductCreateInput!): ProductCreateResult
+  productDelete(id: ID!): ProductDeleteResult
+
+  """
+  Copy as an unpublished draft with new SKUs and slugs; stock is not copied.
+  """
+  productDuplicate(id: ID!): ProductDuplicateResult
+  productTypeCreate(input: ProductTypeInput!): ProductTypeCreateResult
+
+  """Fails while products use the type."""
+  productTypeDelete(id: ID!): ProductTypeDeleteResult
+  productTypeUpdate(id: ID!, input: ProductTypeUpdateInput!): ProductTypeUpdateResult
+  productUpdate(id: ID!, input: ProductUpdateInput!): ProductUpdateResult
+  productVariantCreate(input: ProductVariantInput!, productId: ID!): ProductVariantCreateResult
+  productVariantDelete(id: ID!): ProductVariantDeleteResult
+
+  """
+  Replace every price point of a variant (all channels, currencies, groups, tiers and dates).
+  """
+  productVariantPricesSet(prices: [VariantPriceInput!]!, variantId: ID!): ProductVariantPricesSetResult
+  productVariantUpdate(id: ID!, input: ProductVariantUpdateInput!): ProductVariantUpdateResult
+  promotionCreate(input: PromotionInput!): PromotionCreateResult
+  promotionDelete(id: ID!): PromotionDeleteResult
+  promotionUpdate(id: ID!, input: PromotionUpdateInput!): PromotionUpdateResult
+  releaseAddPages(id: ID!, pageIds: [ID!]!): ReleaseAddPagesResult
+  releaseCreate(input: ReleaseInput!, pageIds: [ID!]): ReleaseCreateResult
+
+  """Delete the release; its pages are untouched."""
+  releaseDelete(id: ID!): ReleaseDeleteResult
+
+  """
+  Publish every page in the release together. If any page is not ready, nothing is published and fieldErrors name each page (path [pages, id, …]).
+  """
+  releasePublish(id: ID!): ReleasePublishResult
+  releaseRemovePages(id: ID!, pageIds: [ID!]!): ReleaseRemovePagesResult
+  releaseUpdate(id: ID!, input: ReleaseInput!): ReleaseUpdateResult
+
+  """Only with permissions you hold yourself."""
+  roleCreate(code: String!, name: String!, permissions: [String!]!): RoleCreateResult
+
+  """Fails while the role is assigned to anyone."""
+  roleDelete(id: ID!): RoleDeleteResult
+
+  """
+  Only for roles whose permissions, before and after the change, you hold yourself.
+  """
+  roleUpdate(id: ID!, name: String, permissions: [String!]): RoleUpdateResult
+
+  """
+  Rebuild the search projection for every product. Normally unnecessary: writes keep it current.
+  """
+  searchReindex: SearchReindexResult
+  shippingMethodCreate(input: ShippingMethodInput!): ShippingMethodCreateResult
+
+  """Existing orders keep their own copy of the method."""
+  shippingMethodDelete(id: ID!): ShippingMethodDeleteResult
+  shippingMethodUpdate(id: ID!, input: ShippingMethodUpdateInput!): ShippingMethodUpdateResult
+  shippingZoneCreate(countries: [CountryCode!]!, name: String!): ShippingZoneCreateResult
+
+  """Fails while the zone has shipping methods."""
+  shippingZoneDelete(id: ID!): ShippingZoneDeleteResult
+  shippingZoneUpdate(countries: [CountryCode!], id: ID!, name: String): ShippingZoneUpdateResult
+
+  """First sign-in step. Accounts lock for a while after repeated failures."""
+  staffLogin(email: EmailAddress!, password: String!): StaffLoginResult
+
+  """
+  Second sign-in step: a 6-digit authenticator code or an unused recovery code.
+  """
+  staffLoginVerify(challengeToken: String!, code: String!): StaffLoginVerifyResult
+
+  """
+  Change your own password. Signs out every session and returns a new one.
+  """
+  staffPasswordChange(currentPassword: String!, newPassword: String!): StaffPasswordChangeResult
+  staffPasswordReset(password: String!, token: String!): StaffPasswordResetResult
+
+  """
+  Always accepted, never revealing whether the account exists. Emits staff.password_reset_requested to plugins (the email plugin sends the link), not webhooks.
+  """
+  staffPasswordResetRequest(email: EmailAddress!): StaffPasswordResetRequestResult
+
+  """Save one of your preferences; null removes it."""
+  staffPreferenceSet(key: String!, value: JSON): StaffPreferenceSetResult
+
+  """Update your own profile."""
+  staffProfileUpdate(name: String!): StaffProfileUpdateResult
+  staffTwoFactorDisable(password: String!): StaffTwoFactorDisableResult
+  staffTwoFactorEnable(code: String!): StaffTwoFactorEnableResult
+
+  """
+  Start enrolling an authenticator app; confirm with staffTwoFactorEnable.
+  """
+  staffTwoFactorSetup: StaffTwoFactorSetupResult
+
+  """Only with roles whose permissions you hold yourself."""
+  staffUserCreate(input: StaffUserInput!): StaffUserCreateResult
+
+  """
+  Remove someone's second factor (lost device) and sign them out everywhere. Only for staff whose permissions you hold yourself.
+  """
+  staffUserResetTwoFactor(id: ID!): StaffUserResetTwoFactorResult
+
+  """
+  Set someone else's password; signs them out everywhere. Only for staff whose permissions you hold yourself.
+  """
+  staffUserSetPassword(id: ID!, password: String!): StaffUserSetPasswordResult
+
+  """
+  Clear a lockout after failed sign-ins. Only for staff whose permissions you hold yourself.
+  """
+  staffUserUnlock(id: ID!): StaffUserUnlockResult
+
+  """
+  Deactivating a user also signs them out everywhere. Only for staff, and with roles, whose permissions you hold yourself.
+  """
+  staffUserUpdate(id: ID!, input: StaffUserUpdateInput!): StaffUserUpdateResult
+  stockCreate(input: StockInput!): StockCreateResult
+
+  """
+  Add (receiving) or remove (damage, shrinkage) on-hand stock at a location.
+  """
+  stockLevelAdjust(delta: Int!, locationId: ID!, variantId: ID!): StockLevelAdjustResult
+
+  """Set the counted on-hand quantity of a variant at a location."""
+  stockLevelSet(locationId: ID!, quantity: Int!, variantId: ID!): StockLevelSetResult
+
+  """
+  Set counted on-hand quantities by SKU and location code, up to 5000 rows. Unresolved rows are skipped and reported; the rest apply in one transaction.
+  """
+  stockLevelsImport(levels: [StockLevelImportInput!]!): StockLevelsImportResult
+  stockLocationCreate(input: StockLocationInput!): StockLocationCreateResult
+  stockLocationUpdate(id: ID!, input: StockLocationUpdateInput!): StockLocationUpdateResult
+  stockUpdate(id: ID!, input: StockUpdateInput!): StockUpdateResult
+  taxClassCreate(input: TaxClassInput!): TaxClassCreateResult
+
+  """
+  Fails while products, product types, customer groups, channels or shipping methods use the class.
+  """
+  taxClassDelete(id: ID!): TaxClassDeleteResult
+
+  """Code and kind are fixed once created."""
+  taxClassUpdate(id: ID!, name: String!): TaxClassUpdateResult
+  taxRateCreate(input: TaxRateInput!): TaxRateCreateResult
+
+  """Also removes the rate from every tax rule."""
+  taxRateDelete(id: ID!): TaxRateDeleteResult
+  taxRateUpdate(id: ID!, input: TaxRateUpdateInput!): TaxRateUpdateResult
+  taxRuleCreate(input: TaxRuleInput!): TaxRuleCreateResult
+  taxRuleDelete(id: ID!): TaxRuleDeleteResult
+  taxRuleUpdate(id: ID!, input: TaxRuleUpdateInput!): TaxRuleUpdateResult
+
+  """
+  Exchange a refresh token for a new session. Refresh tokens are single use; replaying one revokes the whole session family.
+  """
+  tokenRefresh(refreshToken: String!): TokenRefreshResult
+  urlRedirectCreate(input: UrlRedirectInput!): UrlRedirectCreateResult
+  urlRedirectDelete(id: ID!): UrlRedirectDeleteResult
+  webhookDeliveryRetry(id: ID!): WebhookDeliveryRetryResult
+  webhookSubscriptionCreate(events: [String!]!, name: String!, url: String!): WebhookSubscriptionCreateResult
+  webhookSubscriptionDelete(id: ID!): WebhookSubscriptionDeleteResult
+  webhookSubscriptionUpdate(events: [String!], id: ID!, isActive: Boolean, name: String, url: String): WebhookSubscriptionUpdateResult
+}
+
+interface Node {
+  id: ID!
+}
+
+type NotFoundError implements Error {
+  code: ErrorCode
+  message: String
+  resource: String
+}
+
+type Order implements Node {
+  amountAuthorized: Money
+  billingAddress: Address
+
+  """Open, unshipped and not yet charged."""
+  canCancel: Boolean
+  canceledAt: DateTime
+  channel: Channel
+  completedAt: DateTime
+  couponCodes: [String!]
+  currencyCode: CurrencyCode
+  customer: Customer
+  email: EmailAddress
+  fulfillmentStatus: FulfillmentStatus
+  fulfillments: [Fulfillment!]
+  id: ID!
+  invoices: [Invoice!]
+  lines: [OrderLine!]
+  locale: LocaleCode
+  metadata: JSON
+  number: String
+  paymentMethodCode: String
+  paymentStatus: PaymentStatus
+  placedAt: DateTime
+  refunds: [Refund!]
+
+  """
+  Active shipping providers that can book a shipment (buy a label) for orderFulfill, the one behind the order's rate first.
+  """
+  shipmentProviders: [ShippingProvider!]
+  shippingAddress: Address
+  shippingMethod: OrderShippingMethod
+  status: OrderStatus
+  timeline: [OrderEvent!]
+  totals: OrderTotals
+  transactions: [PaymentTransaction!]
+}
+
+union OrderCancelResult = AuthenticationError | InvalidStateError | NotFoundError | OrderPayload | PermissionDeniedError | ValidationError
+
+union OrderCapturePaymentResult = AuthenticationError | InvalidStateError | NotFoundError | OrderPayload | PermissionDeniedError | ValidationError
+
+union OrderCreateResult = AuthenticationError | CartNotReadyError | InsufficientStockError | InvalidStateError | NotFoundError | OrderPayload | PaymentDeclinedError | PermissionDeniedError | ValidationError
+
+type OrderDiscount {
+  amount: Money
+  couponCode: String
+  name: String
+}
+
+"""
+A complete draft. Send it to orderDraftQuote while editing and to orderCreate to place it.
+"""
+input OrderDraftInput {
+  billingAddress: AddressInput
+  billingSameAsShipping: Boolean
+  channelId: ID!
+  couponCodes: [String!]
+
+  """Defaults to the channel's."""
+  currency: CurrencyCode
+
+  """Omit for a guest order (then email is required)."""
+  customerId: ID
+
+  """Defaults to the customer's."""
+  email: EmailAddress
+  lines: [OrderDraftLineInput!]!
+
+  """Defaults to the channel's."""
+  locale: LocaleCode
+
+  """Added to the order timeline."""
+  note: String
+  paymentMethodCode: String
+  shippingAddress: AddressInput
+  shippingMethodCode: String
+}
+
+input OrderDraftLineInput {
+  quantity: Int!
+  variantId: ID!
+}
+
+"""The draft priced exactly as checkout would, without creating anything."""
+type OrderDraftQuote {
+  coupons: [CartCoupon!]
+  currencyCode: CurrencyCode
+  discountTotal: Money
+  discounts: [AppliedDiscount!]
+  lines: [OrderDraftQuoteLine!]
+
+  """What orderCreate still needs. Empty means ready."""
+  missing: [CartRequirement!]
+  paymentMethods: [PaymentMethodOption!]
+  requiresShipping: Boolean
+  selectedShippingMethodCode: String
+  shipping: Money
+
+  """Rates for the shipping address."""
+  shippingRates: [ShippingRate!]
+  subtotal: Money
+  tax: Money
+  taxLines: [TaxLine!]
+  total: Money
+}
+
+type OrderDraftQuoteLine {
+  discount: Money
+  issue: CartLineIssue
+  name: String
+  quantity: Int
+  salableQuantity: Int
+  sku: String
+  subtotal: Money
+  tax: Money
+  total: Money
+  unitPrice: Money
+  variant: ProductVariant
+}
+
+type OrderEvent {
+  actorId: ID
+  actorType: String
+  createdAt: DateTime
+  data: JSON
+  message: String
+  type: String
+}
+
+input OrderFilter {
+  channelId: ID
+  customerId: ID
+  fulfillmentStatus: FulfillmentStatus
+  paymentStatus: PaymentStatus
+  placedAfter: DateTime
+  placedBefore: DateTime
+
+  """Order number or email."""
+  query: String
+  status: OrderStatus
+}
+
+input OrderFulfillInput {
+  """
+  Book the shipment with a shipping provider first (e.g. buy a label); its tracking is added. See Order.shipmentProviders.
+  """
+  createShipment: Boolean
+
+  """Defaults to everything not yet shipped."""
+  lines: [OrderLineQuantityInput!]
+
+  """Defaults to the channel stock's first location."""
+  locationId: ID
+
+  """
+  With createShipment: the provider's code. Defaults to the one behind the order's shipping rate.
+  """
+  shipmentProvider: String
+  tracking: [TrackingNumberInput!]
+}
+
+union OrderFulfillResult = AuthenticationError | InvalidStateError | NotFoundError | OrderPayload | PermissionDeniedError | ValidationError
+
+type OrderLine {
+  discount: Money
+  id: ID
+  name: String
+  product: Product
+  quantity: Int
+  quantityCanceled: Int
+  quantityFulfilled: Int
+  quantityRefunded: Int
+  sku: String
+  subtotal: Money
+  tax: Money
+  taxRate: Float
+  total: Money
+  unitPrice: Money
+
+  """Null if the variant was deleted since."""
+  variant: ProductVariant
+
+  """Snapshot of the variant's options when ordered."""
+  variantAttributes: JSON
+}
+
+input OrderLineQuantityInput {
+  orderLineId: ID!
+  quantity: Int!
+}
+
+union OrderNoteAddResult = AuthenticationError | NotFoundError | OrderPayload | PermissionDeniedError | ValidationError
+
+type OrderPayload {
+  order: Order
+}
+
+input OrderRefundInput {
+  lines: [RefundLineInput!]
+  reason: String
+  shippingAmount: Decimal
+}
+
+union OrderRefundResult = AuthenticationError | InvalidStateError | NotFoundError | OrderPayload | PermissionDeniedError | ValidationError
+
+type OrderShippingMethod {
+  carrier: String
+  code: String
+  name: String
+  price: Money
+
+  """
+  The shipping provider behind the rate (null on orders placed before providers).
+  """
+  provider: String
+}
+
+enum OrderStatus {
+  CANCELED
+  COMPLETED
+  OPEN
+}
+
+type OrderTaxLine {
+  amount: Money
+  name: String
+  rate: Float
+}
+
+type OrderTotals {
+  discountTotal: Money
+  discounts: [OrderDiscount!]
+  paid: Money
+  pricesIncludeTax: Boolean
+  refunded: Money
+  shipping: Money
+  subtotal: Money
+  tax: Money
+  taxLines: [OrderTaxLine!]
+  total: Money
+}
+
+type OrderUpdate {
+  """e.g. order.fulfilled"""
+  eventType: String
+
+  """As of this event."""
+  fulfillmentStatus: FulfillmentStatus
+  occurredAt: DateTime
+
+  """The order now."""
+  order: Order
+
+  """As of this event."""
+  paymentStatus: PaymentStatus
+
+  """As of this event."""
+  status: OrderStatus
+}
+
+union OrderUpdateAddressesResult = AuthenticationError | InvalidStateError | NotFoundError | OrderPayload | PermissionDeniedError | ValidationError
+
+"""
+A page built from components. Storefronts get the published version, or the draft with a preview token.
+"""
+type Page implements Node {
+  allChannels: Boolean
+
+  """Sections only: the category whose own sections this page holds."""
+  category: Category
+  channels: [Channel!]
+
+  """
+  The component tree in the request locale: { id, component, variation, fields }, with blocks fields holding child nodes and list fields holding { id, fields } items. Hidden components and those not targeted at this channel, locale or time are left out. Links are { kind, href, id, newTab }; products and categories are global ids, resolved in references.
+  """
+  content: JSON
+  contentType: Component
+  createdAt: DateTime
+
+  """
+  The draft as stored: every locale, hidden components and targeting included.
+  """
+  document: JSON
+  draftUpdatedAt: DateTime
+  draftUpdatedBy: StaffUser
+  firstPublishedAt: DateTime
+  id: ID!
+
+  """
+  Where the page is served; null for content types without paths (header, footer, templates).
+  """
+  path: String
+
+  """Sections only: the product whose own sections this page holds."""
+  product: Product
+  publishedAt: DateTime
+  publishedBy: StaffUser
+  publishedDocument: JSON
+  publishedPath: String
+  references: PageReferences
+  releases: [Release!]
+
+  """Why the last scheduled publish failed."""
+  scheduleError: String
+  scheduledAt: DateTime
+
+  """
+  Set for a product's or category's own sections (Product.sections, Category.sections): which of the two they belong to.
+  """
+  sectionsFor: TemplateFor
+  seo: PageSeo
+  status: PageStatus
+
+  """
+  Set for templates: product or category pages render with this page, with the product or category as data for its components.
+  """
+  templateFor: TemplateFor
+
+  """
+  Templates only: the products and categories it is assigned to, and whether it is the default.
+  """
+  templateTargets: TemplateTargets
+  title: String
+  titles: [LocalizedString!]
+
+  """The content type's code, e.g. landing_page."""
+  type: String
+  updatedAt: DateTime
+
+  """Increments on every draft save; pass it back as baseVersion."""
+  version: Int
+
+  """Newest first."""
+  versions: [PageVersion!]
+}
+
+input PageCreateInput {
+  """Empty means every channel."""
+  channelIds: [ID!]
+
+  """Required for routable content types."""
+  path: String
+  titles: [LocalizedStringInput!]!
+
+  """A content type's code."""
+  type: String!
+}
+
+union PageCreateResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+union PageDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union PageDiscardDraftResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+union PageDuplicateResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+type PageImage {
+  alt: String
+  height: Int
+  url: String
+  width: Int
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+"""A page linked from content: where it is served and its title."""
+type PageLink {
+  id: ID
+  path: String
+  title: String
+}
+
+type PagePayload {
+  page: Page
+}
+
+union PagePublishResult = AuthenticationError | ConflictError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+"""
+Objects the content refers to by id, so one request renders the whole page.
+"""
+type PageReferences {
+  categories: [Category!]
+  pages: [PageLink!]
+
+  """
+  Products the storefront may show; unpublished ones are left out (render nothing for them).
+  """
+  products: [Product!]
+}
+
+union PageSaveDraftResult = AuthenticationError | ConflictError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+union PageScheduleResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+union PageSectionsCreateResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+"""Search and sharing metadata, in the request locale."""
+type PageSeo {
+  description: String
+  image: PageImage
+  noIndex: Boolean
+
+  """Falls back to nothing; frontends usually use the page title."""
+  title: String
+}
+
+union PageSettingsUpdateResult = AuthenticationError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+enum PageSort {
+  """By path (the site's structure)."""
+  PATH
+
+  """
+  Most recently changed first (admin: draft saves; storefront: publishes).
+  """
+  UPDATED
+}
+
+enum PageStatus {
+  """Live, with draft changes not yet published."""
+  CHANGED
+
+  """Never published."""
+  DRAFT
+
+  """Live, with no unpublished changes."""
+  PUBLISHED
+
+  """Will publish at scheduledAt."""
+  SCHEDULED
+}
+
+union PageTemplateCustomizeResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+union PageTemplateTargetsUpdateResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+union PageUnpublishResult = AuthenticationError | InvalidStateError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+type PageVersion {
+  createdAt: DateTime
+  createdBy: StaffUser
+  document: JSON
+  id: ID
+  kind: PageVersionKind
+  label: String
+  version: Int
+}
+
+enum PageVersionKind {
+  AUTOSAVE
+  PUBLISH
+  RESTORE
+  SAVE
+}
+
+union PageVersionRestoreResult = AuthenticationError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+union PageVersionSaveResult = AuthenticationError | NotFoundError | PagePayload | PermissionDeniedError | ValidationError
+
+type PaymentDeclinedError implements Error {
+  code: ErrorCode
+  declineCode: String
+  message: String
+}
+
+type PaymentMethod implements Node {
+  """True when not restricted to particular channels."""
+  allChannels: Boolean
+
+  """Null means the provider's default."""
+  captureMode: CaptureMode
+  channels: [Channel!]
+  code: String
+  countries: [CountryCode!]
+  id: ID!
+  isActive: Boolean
+  names: [LocalizedString!]
+  position: Int
+  provider: String
+}
+
+union PaymentMethodCreateResult = AuthenticationError | NotFoundError | PaymentMethodPayload | PermissionDeniedError | ValidationError
+
+input PaymentMethodInput {
+  captureMode: CaptureMode
+  channelIds: [ID!]
+  code: String!
+  countries: [CountryCode!]
+  isActive: Boolean
+  names: [LocalizedStringInput!]!
+  position: Int
+
+  """
+  A provider code from paymentProviders: offline, test_gateway, stripe, …
+  """
+  provider: String!
+}
+
+type PaymentMethodOption {
+  code: String
+  instructions: String
+  name: String
+
+  """The payment provider behind the method, e.g. stripe, offline."""
+  provider: String
+
+  """
+  Start a payment session (cartPaymentSessionCreate) and confirm the payment in the browser before placing the order.
+  """
+  sessionRequired: Boolean
+}
+
+type PaymentMethodPayload {
+  paymentMethod: PaymentMethod
+}
+
+"""Code and provider are fixed once created."""
+input PaymentMethodUpdateInput {
+  """Null resets to the provider's default."""
+  captureMode: CaptureMode
+
+  """Empty means every channel."""
+  channelIds: [ID!]
+  countries: [CountryCode!]
+  isActive: Boolean
+  names: [LocalizedStringInput!]
+  position: Int
+}
+
+union PaymentMethodUpdateResult = AuthenticationError | NotFoundError | PaymentMethodPayload | PermissionDeniedError | ValidationError
+
+"""
+A payment provider payment methods can use: built in, or from a plugin.
+"""
+type PaymentProviderInfo {
+  """
+  False while its plugin is disabled or needs settings: methods using it are not offered at checkout.
+  """
+  active: Boolean
+  code: String
+  description: String
+
+  """The plugin it comes from; null when built in."""
+  plugin: String
+  title: String
+}
+
+enum PaymentStatus {
+  AUTHORIZED
+  PAID
+  PARTIALLY_PAID
+  PARTIALLY_REFUNDED
+
+  """Awaiting payment (e.g. bank transfer)."""
+  PENDING
+  REFUNDED
+  VOIDED
+}
+
+type PaymentTransaction {
+  amount: Money
+  createdAt: DateTime
+  errorMessage: String
+  id: ID
+  kind: String
+  paymentMethodCode: String
+  provider: String
+  pspReference: String
+  status: String
+}
+
+input PercentageOffActionInput {
+  maxDiscount: [MoneyByCurrencyInput!]
+  percent: Float!
+  target: LinePredicateInput
+}
+
+type PeriodCount {
+  count: Int
+  period: String
+}
+
+"""
+A group of permissions: `<code>:read` and `<code>:write` (which implies read).
+"""
+type PermissionArea {
+  code: String
+  description: String
+  name: String
+}
+
+type PermissionDeniedError implements Error {
+  code: ErrorCode
+  message: String
+  permission: String
+}
+
+"""
+A plugin installed with the platform (ecom.config.ts). Active means enabled with every required setting filled in.
+"""
+type Plugin {
+  active: Boolean
+
+  """Has a connection check (pluginCheck)."""
+  canCheck: Boolean
+  capabilities: PluginCapabilities
+  configured: Boolean
+
+  """Event deliveries to its handlers, newest first."""
+  deliveries(first: Int = 20, status: PluginDeliveryStatus): [PluginDelivery!]
+  description: String
+  enabled: Boolean
+
+  """Adds pages, navigation or widgets to the admin."""
+  hasAdmin: Boolean
+
+  """Keys of required settings without a value."""
+  missingSettings: [String!]
+  name: String
+  permissions: [PluginPermission!]
+  settings: [PluginSetting!]
+  tasks: [PluginTask!]
+  title: String
+  version: String
+}
+
+"""What the plugin extends."""
+type PluginCapabilities {
+  """Pages, navigation or widgets in the admin."""
+  admin: Boolean
+  emits: [String!]
+
+  """Event types or patterns it handles."""
+  events: [String!]
+  graphql: Boolean
+  hooks: [String!]
+  migrations: Boolean
+  paymentProviders: [String!]
+
+  """HTTP routes under /plugins/<name>/."""
+  routes: Boolean
+  shippingProviders: [String!]
+  tasks: [String!]
+}
+
+type PluginCheckPayload {
+  """What the plugin found, for staff."""
+  message: String
+  ok: Boolean
+}
+
+union PluginCheckResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | PluginCheckPayload | ValidationError
+
+"""
+One event for one of the plugin's handlers, retried with backoff until it succeeds or gives up.
+"""
+type PluginDelivery {
+  attempts: Int
+  createdAt: DateTime
+  eventId: ID
+  eventType: String
+
+  """The `events` key that matched, e.g. order.*"""
+  handler: String
+  id: ID
+  lastError: String
+  nextAttemptAt: DateTime
+  status: PluginDeliveryStatus
+}
+
+type PluginDeliveryRetryPayload {
+  delivery: PluginDelivery
+}
+
+union PluginDeliveryRetryResult = AuthenticationError | NotFoundError | PermissionDeniedError | PluginDeliveryRetryPayload | ValidationError
+
+enum PluginDeliveryStatus {
+  """Gave up; retry manually."""
+  DEAD
+
+  """Will retry with backoff."""
+  FAILED
+  PENDING
+  SUCCEEDED
+}
+
+type PluginPermission {
+  code: String
+  description: String
+
+  """The name of the plugin that introduces it."""
+  plugin: String
+
+  """That plugin's title, to group permissions under (roles screen)."""
+  pluginTitle: String
+}
+
+"""
+One setting as staff see it. Secrets are write-only: `value` is always null for them; `isSet` says whether one is stored.
+"""
+type PluginSetting {
+  """
+  What applies when no value is set; null when the field has no default (and for secrets, which have none).
+  """
+  default: JSON
+  description: String
+
+  """The environment variable that supplies it instead, when set."""
+  env: String
+  integer: Boolean
+  isSet: Boolean
+  key: String
+  label: String
+  max: Float
+  min: Float
+  multiline: Boolean
+  options: [PluginSettingOption!]
+  placeholder: String
+  required: Boolean
+  source: PluginSettingSource
+  type: PluginSettingType
+
+  """The value in effect; null for secrets."""
+  value: JSON
+}
+
+type PluginSettingOption {
+  label: String
+  value: String
+}
+
+"""Where a setting's value comes from, in order of precedence."""
+enum PluginSettingSource {
+  """Saved under Settings › Plugins."""
+  ADMIN
+
+  """The plugin's default."""
+  DEFAULT
+
+  """The environment variable named in `env`; read-only in the admin."""
+  ENV
+  UNSET
+}
+
+enum PluginSettingType {
+  BOOLEAN
+  NUMBER
+
+  """Write-only: never returned."""
+  SECRET
+  SELECT
+  STRING
+}
+
+"""A task the worker runs at most once per interval."""
+type PluginTask {
+  description: String
+  intervalMinutes: Int
+  lastError: String
+  lastFinishedAt: DateTime
+  lastStartedAt: DateTime
+
+  """running, succeeded or failed."""
+  lastStatus: String
+  name: String
+}
+
+type PluginTaskRunPayload {
+  task: PluginTask
+}
+
+union PluginTaskRunResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | PluginTaskRunPayload | ValidationError
+
+input PluginUpdateInput {
+  enabled: Boolean
+
+  """
+  Values by key: a value sets, null clears, a missing key keeps. A secret also keeps on an empty string (forms show secrets blank).
+  """
+  settings: JSON
+}
+
+type PluginUpdatePayload {
+  plugin: Plugin
+}
+
+union PluginUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | PluginUpdatePayload | ValidationError
+
+"""
+A preview of draft content. In the storefront API this describes the request's x-preview-token.
+"""
+type PreviewSession {
+  """
+  The admin's origin: the only window the visual editing bridge talks to.
+  """
+  adminOrigin: String
+
+  """Scheduled content is shown as of this time."""
+  at: String
+  expiresAt: DateTime
+
+  """
+  The storefront path the preview opens; for a template, the product or category page it renders.
+  """
+  path: String
+
+  """Send as x-preview-token. Read-only access to drafts; expires."""
+  token: String
+
+  """
+  The frontend's preview route for the page; frame it for visual editing.
+  """
+  url: String
+}
+
+union PreviewSessionCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | PreviewSessionPayload | ValidationError
+
+type PreviewSessionPayload {
+  session: PreviewSession
+}
+
+"""Inclusive bounds in the request currency."""
+input PriceFilterInput {
+  max: Decimal
+  min: Decimal
+}
+
+type PriceRange {
+  maximum: Money
+  minimum: Money
+}
+
+type Product implements Node {
+  """Raw attribute values keyed by code."""
+  attributeValues: JSON
+
+  """Product-level attributes (variant axes are under `options`)."""
+  attributes: [ProductAttribute!]
+  categories: [Category!]
+  channelListings: [ProductChannelListing!]
+  createdAt: DateTime
+
+  """HTML."""
+  description: String
+  id: ID!
+
+  """Whether any variant can be bought now."""
+  isAvailable: Boolean
+  media: [Media!]
+  name: String
+  options: [ProductOption!]
+  priceRange: ProductPriceRange
+  productType: ProductType
+
+  """
+  This product's own sections, to render with the product as data where its template places the product sections component. Null when it has none. Drafts appear only with a preview token.
+  """
+  sections: Page
+  seo: Seo
+  slug: String
+  status: ProductStatus
+
+  """
+  The product's own override; null means its product type's tax class applies.
+  """
+  taxClass: TaxClass
+
+  """
+  The page builder template for this product's page: the one assigned to the product, else its nearest category's, else the default. Render its content with the product as data. Null means none: use your built-in layout. Drafts appear only with a preview token.
+  """
+  template: Page
+  templateMatch(
+    """
+    Only count published templates: what visitors see now. By default unpublished ones count too.
+    """
+    live: Boolean
+  ): TemplateMatch
+  translations: [ProductTranslation!]
+  updatedAt: DateTime
+
+  """
+  The variant matching every selected option, e.g. color=blue and size=m.
+  """
+  variant(selectedOptions: [SelectedOptionInput!]!): ProductVariant
+  variants: [ProductVariant!]
+}
+
+"""A typed attribute value, already formatted for the request locale."""
+type ProductAttribute {
+  attribute: AttributeDefinition
+
+  """Selected options for select and multiselect attributes."""
+  options: [AttributeOption!]
+  raw: JSON
+
+  """Display value, e.g. "Organic cotton" or "Blue, Green"."""
+  value: String
+}
+
+union ProductBulkDeleteResult = AuthenticationError | BulkDeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input ProductBulkUpdateInput {
+  addCategoryIds: [ID!]
+
+  """
+  Merged into each product and checked against each product's type. Localized text is merged per language, so setting one language keeps the others.
+  """
+  attributes: [AttributeValueInput!]
+
+  """Upserted per channel; other channels are left alone."""
+  channelListings: [ProductChannelListingInput!]
+  removeCategoryIds: [ID!]
+  status: ProductStatus
+}
+
+union ProductBulkUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductsPayload | ValidationError
+
+type ProductChannelListing {
+  channel: Channel
+  isPublished: Boolean
+  publishedAt: DateTime
+  visibleInListings: Boolean
+}
+
+input ProductChannelListingInput {
+  channelId: ID!
+  isPublished: Boolean
+  visibleInListings: Boolean
+}
+
+type ProductConnection {
+  edges: [ProductEdge]
+
+  """
+  Counts per filterable attribute value. Disjunctive: selecting a value keeps its siblings' counts.
+  """
+  facets: [Facet!]
+  pageInfo: PageInfo!
+
+  """
+  Price span of all matches, ignoring the price filter (for range sliders).
+  """
+  priceRange: PriceRange
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+input ProductCreateInput {
+  attributes: [AttributeValueInput!]
+  categoryIds: [ID!]
+  channelListings: [ProductChannelListingInput!]
+  media: [ProductMediaInput!]
+  productTypeId: ID!
+  status: ProductStatus
+
+  """Overrides the product type's tax class; omit to follow the type."""
+  taxClassId: ID
+  translations: [ProductTranslationInput!]!
+  variants: [ProductVariantInput!]!
+}
+
+union ProductCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductPayload | ValidationError
+
+union ProductDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union ProductDuplicateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductPayload | ValidationError
+
+type ProductEdge {
+  cursor: String!
+  node: Product
+}
+
+input ProductFilter {
+  """Values within one attribute are ORed; attributes are ANDed."""
+  attributes: [AttributeFilterInput!]
+
+  """Includes products in descendant categories."""
+  categoryId: ID
+  ids: [ID!]
+  inStock: Boolean
+  price: PriceFilterInput
+  productTypeId: ID
+  status: ProductStatus
+}
+
+input ProductMediaInput {
+  alt: [LocalizedStringInput!]
+  kind: MediaKind
+  position: Int
+  url: String!
+  variantSku: String
+}
+
+"""
+A variant axis (e.g. Size) with the values that exist among the product's variants.
+"""
+type ProductOption {
+  attribute: AttributeDefinition
+  values: [AttributeOption!]
+}
+
+type ProductPayload {
+  product: Product
+}
+
+"""Prices for the request's channel, currency and customer group."""
+type ProductPriceRange {
+  compareAtMinVariantPrice: Money
+  maxVariantPrice: Money
+  minVariantPrice: Money
+}
+
+type ProductSalesRow {
+  currencyCode: CurrencyCode
+
+  """Name when ordered."""
+  name: String
+  orders: Int
+  product: Product
+  quantity: Int
+  refundedQuantity: Int
+
+  """Line totals after discounts."""
+  revenue: Money
+  sku: String
+  variant: ProductVariant
+}
+
+enum ProductSalesSort {
+  QUANTITY
+  REVENUE
+}
+
+enum ProductSortField {
+  """
+  A category's merchandised listing: its pinned products in order, then the rest newest first. Elsewhere, newest first. Storefront only.
+  """
+  FEATURED
+  NAME
+  NEWEST
+  PRICE
+  RELEVANCE
+}
+
+input ProductSortInput {
+  """
+  Defaults to DESC for NEWEST and RELEVANCE (newest, best match first) and ASC for NAME and PRICE. FEATURED ignores it.
+  """
+  direction: SortDirection
+  field: ProductSortField!
+}
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+  DRAFT
+}
+
+type ProductTranslation {
+  description: String
+  locale: LocaleCode
+  metaDescription: String
+  metaTitle: String
+  name: String
+  slug: String
+}
+
+input ProductTranslationInput {
+  """HTML."""
+  description: String
+  locale: LocaleCode!
+  metaDescription: String
+  metaTitle: String
+  name: String!
+
+  """Generated from the name when omitted; made unique per locale."""
+  slug: String
+}
+
+type ProductType implements Node {
+  attributes: [AttributeDefinition!]
+  code: String
+  id: ID!
+  isShippable: Boolean
+  name: String
+
+  """Products of this type; a type in use cannot be deleted."""
+  productCount: Int
+  taxClass: TaxClass
+  variantAttributes: [AttributeDefinition!]
+}
+
+union ProductTypeCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductTypePayload | ValidationError
+
+union ProductTypeDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+input ProductTypeInput {
+  attributeCodes: [String!]
+  code: String!
+
+  """False for virtual or digital goods."""
+  isShippable: Boolean
+  name: String!
+  taxClassId: ID
+
+  """Select attributes that define variants. Fixed after creation."""
+  variantAttributeCodes: [String!]
+}
+
+type ProductTypePayload {
+  productType: ProductType
+}
+
+input ProductTypeUpdateInput {
+  attributeCodes: [String!]
+  isShippable: Boolean
+  name: String
+  taxClassId: ID
+}
+
+union ProductTypeUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductTypePayload | ValidationError
+
+"""
+Lists (translations by locale aside) replace what is stored. Changing a slug records a redirect from the old URL.
+"""
+input ProductUpdateInput {
+  """Merged; use clear to remove one."""
+  attributes: [AttributeValueInput!]
+  categoryIds: [ID!]
+  channelListings: [ProductChannelListingInput!]
+  media: [ProductMediaInput!]
+
+  """
+  Locales whose translation (name, slug, description and meta fields) to delete; at least one must remain. Localized attribute values and alt text are kept.
+  """
+  removeTranslations: [LocaleCode!]
+  status: ProductStatus
+
+  """
+  Null removes the product's override, so its product type's tax class applies.
+  """
+  taxClassId: ID
+
+  """Upserted per locale."""
+  translations: [ProductTranslationInput!]
+}
+
+union ProductUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductPayload | ValidationError
+
+type ProductVariant implements Node {
+  allowBackorder: Boolean
+  barcode: String
+  compareAtPrice: Money
+  id: ID!
+  isActive: Boolean
+  isAvailable: Boolean
+  media: [Media!]
+
+  """
+  Product name with the variant's options, e.g. "Oxford Shirt – Blue / M".
+  """
+  name: String
+  position: Int
+  price: Money
+  prices: [VariantPrice!]
+  product: Product
+
+  """
+  Salable quantity in the channel's stock; null when the variant does not track inventory.
+  """
+  quantityAvailable: Int
+  selectedOptions: [SelectedOption!]
+  sku: String
+  stockLevels: [StockLevel!]
+  tierPrices: [TierPrice!]
+  trackInventory: Boolean
+  weightGrams: Int
+}
+
+union ProductVariantCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductVariantPayload | ValidationError
+
+union ProductVariantDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input ProductVariantInput {
+  allowBackorder: Boolean
+  barcode: String
+  isActive: Boolean
+
+  """Values for the product type's variant axes, e.g. color=blue, size=m."""
+  options: [SelectedOptionInput!]
+  position: Int
+  prices: [VariantPriceInput!]
+  sku: String!
+  stock: [StockLevelInput!]
+  trackInventory: Boolean
+  weightGrams: Int
+}
+
+type ProductVariantPayload {
+  variant: ProductVariant
+}
+
+union ProductVariantPricesSetResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductVariantPayload | ValidationError
+
+input ProductVariantUpdateInput {
+  allowBackorder: Boolean
+  barcode: String
+  isActive: Boolean
+  options: [SelectedOptionInput!]
+  position: Int
+
+  """Replaces every price point of the variant."""
+  prices: [VariantPriceInput!]
+  sku: String
+
+  """Sets on-hand quantity per location."""
+  stock: [StockLevelInput!]
+  trackInventory: Boolean
+  weightGrams: Int
+}
+
+union ProductVariantUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ProductVariantPayload | ValidationError
+
+type ProductsPayload {
+  products: [Product!]
+}
+
+type Promotion implements Node {
+  """
+  Action (see PromotionActionInput). Amounts are minor units per currency.
+  """
+  action: JSON
+
+  """Empty means every channel."""
+  channels: [Channel!]
+
+  """Condition tree (see PromotionConditionInput)."""
+  conditions: JSON
+  coupons: [Coupon!]
+  createdAt: DateTime
+
+  """Empty means every group."""
+  customerGroups: [CustomerGroup!]
+  description: String
+  endsAt: DateTime
+  id: ID!
+  isActive: Boolean
+  name: String
+
+  """Lower runs first."""
+  priority: Int
+  requiresCoupon: Boolean
+  startsAt: DateTime
+  stopFurtherRules: Boolean
+  timesUsed: Int
+  usageLimit: Int
+  usageLimitPerCustomer: Int
+}
+
+"""What the promotion does. Exactly one field."""
+input PromotionActionInput @oneOf {
+  buyXGetY: BuyXGetYActionInput
+  fixedOffCart: FixedOffCartActionInput
+  fixedOffEach: FixedOffEachActionInput
+  percentageOff: PercentageOffActionInput
+  shippingOff: ShippingOffActionInput
+}
+
+"""A condition tree node. Exactly one field."""
+input PromotionConditionInput @oneOf {
+  all: [PromotionConditionInput!]
+  any: [PromotionConditionInput!]
+  customerGroupIn: [ID!]
+  lineMatches: LineMatchesConditionInput
+  not: PromotionConditionInput
+  shippingCountryIn: [CountryCode!]
+  subtotal: SubtotalConditionInput
+  totalQuantity: QuantityConditionInput
+}
+
+union PromotionCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | PromotionPayload | ValidationError
+
+union PromotionDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input PromotionInput {
+  action: PromotionActionInput!
+  channelIds: [ID!]
+  conditions: PromotionConditionInput
+  couponCodes: [String!]
+  customerGroupIds: [ID!]
+  description: String
+  endsAt: DateTime
+  isActive: Boolean
+  name: String!
+  priority: Int
+  requiresCoupon: Boolean
+  startsAt: DateTime
+  stopFurtherRules: Boolean
+  usageLimit: Int
+  usageLimitPerCustomer: Int
+}
+
+type PromotionPayload {
+  promotion: Promotion
+}
+
+input PromotionUpdateInput {
+  action: PromotionActionInput
+  channelIds: [ID!]
+  conditions: PromotionConditionInput
+
+  """Added to the existing codes."""
+  couponCodes: [String!]
+  customerGroupIds: [ID!]
+  description: String
+  endsAt: DateTime
+  isActive: Boolean
+  name: String
+  priority: Int
+  startsAt: DateTime
+  stopFurtherRules: Boolean
+  usageLimit: Int
+  usageLimitPerCustomer: Int
+}
+
+union PromotionUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | PromotionPayload | ValidationError
+
+type PromotionUsageRow {
+  couponCode: String
+  currencyCode: CurrencyCode
+  discount: Money
+
+  """Name when applied."""
+  name: String
+  orders: Int
+
+  """Null if the promotion was deleted."""
+  promotion: Promotion
+}
+
+input QuantityConditionInput {
+  operator: ComparisonOperator!
+  value: Int!
+}
+
+"""Entry point for reads."""
+type Query {
+  abandonedCartsReport(
+    first: Int = 50
+
+    """Minimum time since the cart last changed."""
+    idleMinutes: Int = 60
+
+    """Ignore carts last changed before this. Default: 30 days ago."""
+    since: DateTime
+  ): [AbandonedCart!]
+
+  """
+  Names of the plugins that are enabled and configured: which plugin pages, navigation and widgets the admin shows (each still checks its own permissions).
+  """
+  activePlugins: [String!]
+  apiKeys: [ApiKey!]
+
+  """All attribute definitions, e.g. to render filters."""
+  attributeDefinitions: [AttributeDefinition!]
+
+  """Admin activity, newest first."""
+  auditLog(after: String, before: String, filter: AuditLogFilter, first: Int, last: Int): QueryAuditLogConnection
+
+  """
+  Every category, depth first in position order (a flat view of categoryTree), optionally matching a name.
+  """
+  categories(query: String): [Category!]
+  category(id: ID, slug: String): Category
+
+  """Root categories; walk `children` for the tree."""
+  categoryTree: [Category!]
+  channels: [Channel!]
+  component(code: String, id: ID): Component
+  components(kind: ComponentKind): [Component!]
+  customerGroups: [CustomerGroup!]
+
+  """Top customers by spend."""
+  customerSalesReport(channelId: ID, currency: CurrencyCode, first: Int = 20, range: DateRangeInput!): [CustomerSalesRow!]
+
+  """New accounts by period."""
+  customerSignupsReport(granularity: ReportGranularity = DAY, range: DateRangeInput!, timeZone: String): [PeriodCount!]
+  customers(
+    after: String
+    before: String
+    first: Int
+    groupId: ID
+    last: Int
+
+    """Matches email or name."""
+    query: String
+  ): QueryCustomersConnection
+  dashboard(
+    channelId: ID
+    lowStockThreshold: Int = 5
+    range: DateRangeInput!
+
+    """IANA zone for daily buckets, e.g. Europe/Berlin. Default UTC."""
+    timeZone: String
+  ): Dashboard
+  emailMessage(id: ID!): EmailMessage
+
+  """Emails the email plugin recorded, newest first."""
+  emailMessages(
+    after: String
+    before: String
+    first: Int
+    last: Int
+
+    """Only this order's emails."""
+    orderId: ID
+
+    """Part of the recipient, subject or order number."""
+    query: String
+    status: EmailMessageStatus
+    template: EmailTemplate
+  ): QueryEmailMessagesConnection
+
+  """
+  Render a template without sending it: from an order (by id or number), or from sample data.
+  """
+  emailPreview(
+    """Defaults to the order's locale, else the channel's."""
+    locale: LocaleCode
+    orderId: ID
+    orderNumber: String
+    template: EmailTemplate!
+  ): EmailPreview
+
+  """
+  Every event type, the installed plugins' included; subscriptions may also use prefixes such as order.*
+  """
+  eventTypes: [String!]
+  exchangeRates: [ExchangeRate!]
+  frontends: [Frontend!]
+  localization: Localization
+
+  """Active, tracked variants at or below the threshold."""
+  lowStockReport(first: Int = 50, locationId: ID, threshold: Int = 5): [LowStockRow!]
+  mediaAsset(id: ID!): MediaAsset
+
+  """The media library, newest first."""
+  mediaAssets(
+    after: String
+    before: String
+    first: Int
+    kind: MediaKind
+    last: Int
+
+    """
+    Words in the filename or alt text; each word matches as a prefix ("sum shi" finds summer-shirt.jpg).
+    """
+    query: String
+  ): MediaAssetConnection
+
+  """The configured storage and upload limits."""
+  mediaStorage: MediaStorageInfo
+
+  """Refetch any object by its global id."""
+  node(id: ID!): Node
+
+  """Refetch several objects by global id, in order."""
+  nodes(ids: [ID!]!): [Node]!
+
+  """By number. Storefront: the signed-in customer's orders only."""
+  order(number: String!): Order
+  orderDraftQuote(input: OrderDraftInput!): OrderDraftQuote
+  orders(after: String, before: String, filter: OrderFilter, first: Int, last: Int): QueryOrdersConnection
+
+  """
+  Storefront: the page served at a path (draft content with a preview token). Admin: by id or path.
+  """
+  page(id: ID, path: String): Page
+
+  """
+  Pages by path. Storefront: published pages served in the channel (e.g. for a sitemap or a journal index). Admin: every page; status filters the admin list.
+  """
+  pages(
+    after: String
+    before: String
+    first: Int
+    last: Int
+
+    """Part of the path or title."""
+    query: String
+
+    """Defaults to PATH."""
+    sort: PageSort
+
+    """Admin only; the storefront lists published pages."""
+    status: PageStatus
+
+    """A content type's code."""
+    type: String
+  ): QueryPagesConnection
+  paymentMethods: [PaymentMethod!]
+  paymentProviders: [PaymentProviderInfo!]
+  permissionAreas: [PermissionArea!]
+
+  """
+  Every grantable permission, the installed plugins' included (see pluginPermissions); write implies read.
+  """
+  permissions: [String!]
+  plugin(name: String!): Plugin
+
+  """
+  Permissions the installed plugins introduce, with what each allows and which plugin adds it (their codes are also in `permissions`).
+  """
+  pluginPermissions: [PluginPermission!]
+
+  """The installed plugins, in ecom.config.ts order."""
+  plugins: [Plugin!]
+
+  """
+  Look up a product by exactly one of id, slug (in the request locale) or a variant SKU.
+  """
+  product(id: ID, sku: String, slug: String): Product
+
+  """Best sellers."""
+  productSalesReport(channelId: ID, currency: CurrencyCode, first: Int = 20, range: DateRangeInput!, sortBy: ProductSalesSort = QUANTITY): [ProductSalesRow!]
+  productTypes: [ProductType!]
+
+  """
+  Search variants by SKU, barcode or product name, e.g. for stock counts and order entry.
+  """
+  productVariants(
+    after: String
+    before: String
+    first: Int
+    last: Int
+
+    """Only variants with at most this many on hand across locations."""
+    maxOnHand: Int
+    productId: ID
+    query: String
+    trackInventory: Boolean
+  ): QueryProductVariantsConnection
+
+  """
+  Storefront: full-text search with facets over the channel's published catalog. Admin: every product, newest first, or by name or lowest base price with `sort`.
+  """
+  products(
+    after: String
+    before: String
+    filter: ProductFilter
+    first: Int
+    last: Int
+
+    """Full-text search with prefix matching, e.g. "trail run"."""
+    query: String
+
+    """
+    Defaults to RELEVANCE with a query, then to FEATURED in a category's listing, otherwise NEWEST.
+    """
+    sort: ProductSortInput
+  ): ProductConnection
+
+  """Discount granted per promotion and coupon."""
+  promotionUsageReport(channelId: ID, currency: CurrencyCode, range: DateRangeInput!): [PromotionUsageRow!]
+  promotions(
+    after: String
+    before: String
+    first: Int
+    isActive: Boolean
+    last: Int
+
+    """Matches the name, or a coupon code exactly."""
+    query: String
+  ): QueryPromotionsConnection
+  releases: [Release!]
+  roles: [Role!]
+
+  """
+  What a storefront path serves: a builder page at exactly that path; a product at /products/<slug> or a category at /categories/<slug path>, redirecting when a slug moved or the parents differ; otherwise a product or category by the last segment, else a redirect.
+  """
+  route(path: String!): RouteResult
+
+  """Orders, revenue, discounts, tax, shipping and refunds by period."""
+  salesReport(channelId: ID, currency: CurrencyCode, granularity: ReportGranularity = DAY, range: DateRangeInput!, timeZone: String): SalesReport
+  shippingMethods: [ShippingMethod!]
+
+  """Built-in providers first, then those of the configured plugins."""
+  shippingProviders: [ShippingProvider!]
+  shippingZones: [ShippingZone!]
+
+  """
+  The one page of a singleton content type, e.g. site_header or site_footer.
+  """
+  singletonPage(type: String!): Page
+  staffUsers: [StaffUser!]
+  stockLocations: [StockLocation!]
+  stocks: [Stock!]
+  taxClasses: [TaxClass!]
+  taxRates: [TaxRate!]
+  taxRules: [TaxRule!]
+  urlRedirects(
+    after: String
+    before: String
+    first: Int
+    last: Int
+
+    """Matches either path."""
+    query: String
+  ): QueryUrlRedirectsConnection
+  viewer: Viewer
+
+  """Deliveries across every subscription, newest first."""
+  webhookDeliveries(after: String, before: String, first: Int, last: Int, status: WebhookDeliveryStatus, subscriptionId: ID): QueryWebhookDeliveriesConnection
+  webhookSubscriptions: [WebhookSubscription!]
+}
+
+type QueryAuditLogConnection {
+  edges: [QueryAuditLogConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryAuditLogConnectionEdge {
+  cursor: String!
+  node: AuditEntry
+}
+
+type QueryCustomersConnection {
+  edges: [QueryCustomersConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryCustomersConnectionEdge {
+  cursor: String!
+  node: Customer
+}
+
+type QueryEmailMessagesConnection {
+  edges: [QueryEmailMessagesConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryEmailMessagesConnectionEdge {
+  cursor: String!
+  node: EmailMessage
+}
+
+type QueryOrdersConnection {
+  edges: [QueryOrdersConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryOrdersConnectionEdge {
+  cursor: String!
+  node: Order
+}
+
+type QueryPagesConnection {
+  edges: [QueryPagesConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryPagesConnectionEdge {
+  cursor: String!
+  node: Page
+}
+
+type QueryProductVariantsConnection {
+  edges: [QueryProductVariantsConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryProductVariantsConnectionEdge {
+  cursor: String!
+  node: ProductVariant
+}
+
+type QueryPromotionsConnection {
+  edges: [QueryPromotionsConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryPromotionsConnectionEdge {
+  cursor: String!
+  node: Promotion
+}
+
+type QueryUrlRedirectsConnection {
+  edges: [QueryUrlRedirectsConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryUrlRedirectsConnectionEdge {
+  cursor: String!
+  node: UrlRedirect
+}
+
+type QueryWebhookDeliveriesConnection {
+  edges: [QueryWebhookDeliveriesConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryWebhookDeliveriesConnectionEdge {
+  cursor: String!
+  node: WebhookDelivery
+}
+
+"""The path moved; send the shopper to `location`."""
+type Redirect {
+  location: String
+  statusCode: Int
+}
+
+"""A refund: money returned to the customer."""
+type Refund {
+  amount: Money
+  createdAt: DateTime
+  id: ID
+  lines: [RefundLine!]
+  number: String
+  reason: String
+  shippingAmount: Money
+}
+
+type RefundLine {
+  amount: Money
+  orderLine: OrderLine
+  quantity: Int
+  restocked: Boolean
+}
+
+input RefundLineInput {
+  orderLineId: ID!
+  quantity: Int!
+
+  """Default true."""
+  restock: Boolean
+}
+
+"""Pages to publish together, now or at a scheduled time."""
+type Release implements Node {
+  createdAt: DateTime
+  createdBy: StaffUser
+  description: String
+  error: String
+  id: ID!
+  name: String
+  pages: [Page!]
+
+  """
+  What would stop the release from publishing now (a dry run): paths are [pages, pageId, …]. Empty when ready.
+  """
+  problems: [FieldError!]
+  publishedAt: DateTime
+  publishedBy: StaffUser
+  scheduledAt: DateTime
+  status: ReleaseStatus
+}
+
+union ReleaseAddPagesResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | ReleasePayload | ValidationError
+
+union ReleaseCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ReleasePayload | ValidationError
+
+union ReleaseDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input ReleaseInput {
+  description: String
+  name: String
+
+  """Null unschedules."""
+  scheduledAt: DateTime
+}
+
+type ReleasePayload {
+  release: Release
+}
+
+union ReleasePublishResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | ReleasePayload | ValidationError
+
+union ReleaseRemovePagesResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | ReleasePayload | ValidationError
+
+enum ReleaseStatus {
+  """The scheduled publish failed; see error."""
+  FAILED
+  OPEN
+  PUBLISHED
+  SCHEDULED
+}
+
+union ReleaseUpdateResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | ReleasePayload | ValidationError
+
+enum ReportGranularity {
+  DAY
+  MONTH
+  WEEK
+}
+
+type Role implements Node {
+  code: String
+  id: ID!
+  name: String
+  permissions: [String!]
+}
+
+union RoleCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | RolePayload | ValidationError
+
+union RoleDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type RolePayload {
+  role: Role
+}
+
+union RoleUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | RolePayload | ValidationError
+
+union RouteResult = Category | Page | Product | Redirect
+
+"""Sales in one currency."""
+type SalesFigures {
+  averageOrderValue: Money
+  canceledOrders: Int
+  currencyCode: CurrencyCode
+  discounts: Money
+
+  """Order totals including tax and shipping."""
+  gross: Money
+
+  """Units, net of canceled quantities."""
+  itemsSold: Int
+
+  """Gross minus refunded."""
+  net: Money
+
+  """Orders placed, excluding canceled ones."""
+  orders: Int
+
+  """Refunded so far on orders placed in the period."""
+  refunded: Money
+  shipping: Money
+  subtotal: Money
+  tax: Money
+}
+
+type SalesPeriod {
+  averageOrderValue: Money
+  canceledOrders: Int
+  currencyCode: CurrencyCode
+  discounts: Money
+
+  """Order totals including tax and shipping."""
+  gross: Money
+
+  """Units, net of canceled quantities."""
+  itemsSold: Int
+
+  """Gross minus refunded."""
+  net: Money
+
+  """Orders placed, excluding canceled ones."""
+  orders: Int
+
+  """First day of the period, YYYY-MM-DD, in the report's time zone."""
+  period: String
+
+  """Refunded so far on orders placed in the period."""
+  refunded: Money
+  shipping: Money
+  subtotal: Money
+  tax: Money
+}
+
+type SalesReport {
+  """Every period in the range, YYYY-MM-DD."""
+  periods: [String!]
+
+  """One row per period and currency, empty periods included."""
+  rows: [SalesPeriod!]
+  totals: [SalesFigures!]
+}
+
+type SearchReindexPayload {
+  productCount: Int
+}
+
+union SearchReindexResult = AuthenticationError | NotFoundError | PermissionDeniedError | SearchReindexPayload | ValidationError
+
+"""One variant axis value, e.g. Color: Blue."""
+type SelectedOption {
+  """Attribute code, e.g. color."""
+  attribute: String
+
+  """Option label in the request locale."""
+  label: String
+
+  """Attribute label in the request locale."""
+  name: String
+  swatch: String
+
+  """Option code, e.g. blue."""
+  value: String
+}
+
+input SelectedOptionInput {
+  attribute: String!
+  value: String!
+}
+
+type Seo {
+  description: String
+  title: String
+}
+
+"""
+A signed-in session: a short-lived access token and a single-use refresh token.
+"""
+type Session {
+  accessToken: String
+  accessTokenExpiresAt: DateTime
+  refreshToken: String
+  refreshTokenExpiresAt: DateTime
+}
+
+type SessionPayload {
+  session: Session
+}
+
+type ShippingMethod implements Node {
+  """
+  True when not restricted to particular channels; `channels` then lists every channel.
+  """
+  allChannels: Boolean
+  channels: [Channel!]
+  code: String
+
+  """Amounts are minor units per currency."""
+  config: JSON
+  id: ID!
+  isActive: Boolean
+
+  """The built-in rate model; null for methods of other providers."""
+  kind: ShippingRateKind
+  maxDeliveryDays: Int
+  minDeliveryDays: Int
+  names: [LocalizedString!]
+  position: Int
+
+  """
+  The provider's code: flat_rate, table_rate, free, or a plugin's (see shippingProviders).
+  """
+  provider: String
+
+  """The method's options for a plugin provider; null for built-in ones."""
+  providerOptions: JSON
+
+  """Overrides the channel's shipping tax class."""
+  taxClass: TaxClass
+  zone: ShippingZone
+}
+
+union ShippingMethodCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ShippingMethodPayload | ValidationError
+
+union ShippingMethodDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input ShippingMethodInput {
+  channelIds: [ID!]
+  code: String!
+  isActive: Boolean
+  maxDeliveryDays: Int
+  minDeliveryDays: Int
+  names: [LocalizedStringInput!]!
+  position: Int
+  rate: ShippingRateConfigInput!
+  taxClassId: ID
+  zoneId: ID!
+}
+
+type ShippingMethodPayload {
+  shippingMethod: ShippingMethod
+}
+
+input ShippingMethodUpdateInput {
+  """Empty means every channel."""
+  channelIds: [ID!]
+  isActive: Boolean
+  maxDeliveryDays: Int
+  minDeliveryDays: Int
+  names: [LocalizedStringInput!]
+  position: Int
+  rate: ShippingRateConfigInput
+
+  """Null removes the override."""
+  taxClassId: ID
+  zoneId: ID
+}
+
+union ShippingMethodUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ShippingMethodPayload | ValidationError
+
+input ShippingOffActionInput {
+  methodCodes: [String!]
+
+  """Default 100 (free shipping)."""
+  percent: Float
+}
+
+"""
+A rate engine or carrier that shipping methods use: built in, or from a plugin.
+"""
+type ShippingProvider {
+  """
+  False while its plugin is disabled or not set up: its methods offer no rates.
+  """
+  active: Boolean
+
+  """
+  Flat rate, table rate or free shipping: configured with `rate`, not `methodOptions`.
+  """
+  builtIn: Boolean
+
+  """Can buy labels when staff fulfil orders (orderFulfill createShipment)."""
+  canCreateShipment: Boolean
+
+  """What methods name in `provider`."""
+  code: String
+  description: String
+
+  """Asks a remote service for rates, which are cached for a few minutes."""
+  live: Boolean
+
+  """What each method using it sets in `rate.provider.options`."""
+  methodOptions: [ShippingProviderOption!]
+
+  """The plugin it comes from; null for built-in providers."""
+  plugin: String
+  title: String
+}
+
+input ShippingProviderConfigInput {
+  """The provider's code."""
+  code: String!
+
+  """Values for its methodOptions, by key."""
+  options: JSON
+}
+
+"""
+One option a shipping method sets for its provider, described like a plugin setting so the admin can render a form.
+"""
+type ShippingProviderOption {
+  defaultValue: JSON
+  description: String
+  integer: Boolean
+  key: String
+  label: String
+  max: Float
+  min: Float
+  multiline: Boolean
+
+  """The choices of a SELECT."""
+  options: [ShippingProviderOptionChoice!]
+  placeholder: String
+  required: Boolean
+  type: ShippingProviderOptionType
+}
+
+type ShippingProviderOptionChoice {
+  label: String
+  value: String
+}
+
+enum ShippingProviderOptionType {
+  BOOLEAN
+  NUMBER
+  SECRET
+  SELECT
+  STRING
+}
+
+type ShippingRate {
+  carrier: String
+  code: String
+  description: String
+  maxDeliveryDays: Int
+  minDeliveryDays: Int
+  name: String
+  price: Money
+}
+
+enum ShippingRateBasis {
+  QUANTITY
+  SUBTOTAL
+  WEIGHT
+}
+
+"""Exactly one rate model."""
+input ShippingRateConfigInput @oneOf {
+  flatRate: FlatRateInput
+  free: FreeShippingInput
+
+  """
+  Another provider (shippingProviders), e.g. a plugin's live carrier rates.
+  """
+  provider: ShippingProviderConfigInput
+  tableRate: TableRateInput
+}
+
+enum ShippingRateKind {
+  FLAT_RATE
+  FREE
+  TABLE_RATE
+}
+
+input ShippingRateTierInput {
+  """Grams, minor units or units, per the basis."""
+  from: Float!
+  prices: [MoneyByCurrencyInput!]!
+}
+
+type ShippingZone implements Node {
+  countries: [CountryCode!]
+  id: ID!
+  name: String
+}
+
+union ShippingZoneCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ShippingZonePayload | ValidationError
+
+union ShippingZoneDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type ShippingZonePayload {
+  shippingZone: ShippingZone
+}
+
+union ShippingZoneUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ShippingZonePayload | ValidationError
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+"""
+Either a session, or a two-factor challenge to complete with staffLoginVerify.
+"""
+type StaffAuthPayload {
+  session: Session
+  staffUser: StaffUser
+  twoFactorChallenge: StaffTwoFactorChallenge
+}
+
+union StaffLoginResult = AuthenticationError | NotFoundError | PermissionDeniedError | StaffAuthPayload | ValidationError
+
+union StaffLoginVerifyResult = AuthenticationError | NotFoundError | PermissionDeniedError | StaffAuthPayload | ValidationError
+
+union StaffPasswordChangeResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | StaffSessionPayload | ValidationError
+
+union StaffPasswordResetRequestResult = AcceptedPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+union StaffPasswordResetResult = AcceptedPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+"""A per-user admin setting such as a saved grid view."""
+type StaffPreference {
+  key: String
+  updatedAt: DateTime
+  value: JSON
+}
+
+type StaffPreferencePayload {
+  preference: StaffPreference
+}
+
+union StaffPreferenceSetResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | StaffPreferencePayload | ValidationError
+
+union StaffProfileUpdateResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | StaffUserPayload | ValidationError
+
+"""Every other session was signed out; continue with this one."""
+type StaffSessionPayload {
+  session: Session
+}
+
+"""
+Pass `token` with a code from the authenticator app (or a recovery code) to staffLoginVerify.
+"""
+type StaffTwoFactorChallenge {
+  expiresAt: DateTime
+  token: String
+}
+
+union StaffTwoFactorDisableResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | StaffUserPayload | ValidationError
+
+type StaffTwoFactorEnablePayload {
+  """Single-use codes for a lost device. Shown once."""
+  recoveryCodes: [String!]
+  staffUser: StaffUser
+}
+
+union StaffTwoFactorEnableResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | StaffTwoFactorEnablePayload | ValidationError
+
+type StaffTwoFactorSetupPayload {
+  """Base32 seed for manual entry."""
+  secret: String
+
+  """otpauth:// URI to render as a QR code."""
+  uri: String
+}
+
+union StaffTwoFactorSetupResult = AuthenticationError | InvalidStateError | NotFoundError | PermissionDeniedError | StaffTwoFactorSetupPayload | ValidationError
+
+type StaffUser implements Node {
+  createdAt: DateTime
+  email: EmailAddress
+  id: ID!
+  isActive: Boolean
+  lastLoginAt: DateTime
+
+  """
+  Set after repeated failed sign-ins; cleared by staffUserUnlock or when it passes.
+  """
+  lockedUntil: DateTime
+  name: String
+  passwordChangedAt: DateTime
+  recoveryCodesRemaining: Int
+  roles: [Role!]
+  twoFactorEnabled: Boolean
+}
+
+union StaffUserCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | StaffUserPayload | ValidationError
+
+input StaffUserInput {
+  email: EmailAddress!
+  name: String!
+  password: String!
+  roleIds: [ID!]!
+}
+
+type StaffUserPayload {
+  staffUser: StaffUser
+}
+
+union StaffUserResetTwoFactorResult = AuthenticationError | NotFoundError | PermissionDeniedError | StaffUserPayload | ValidationError
+
+union StaffUserSetPasswordResult = AuthenticationError | NotFoundError | PermissionDeniedError | StaffUserPayload | ValidationError
+
+union StaffUserUnlockResult = AuthenticationError | NotFoundError | PermissionDeniedError | StaffUserPayload | ValidationError
+
+input StaffUserUpdateInput {
+  isActive: Boolean
+  name: String
+  roleIds: [ID!]
+}
+
+union StaffUserUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | StaffUserPayload | ValidationError
+
+type Stock implements Node {
+  code: String
+  id: ID!
+
+  """In sourcing priority order."""
+  locations: [StockLocation!]
+  name: String
+}
+
+union StockCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | StockPayload | ValidationError
+
+input StockInput {
+  code: String!
+
+  """In sourcing priority order."""
+  locationIds: [ID!]!
+  name: String!
+}
+
+"""
+On-hand quantity of a variant at one location. Salable quantity also subtracts open reservations.
+"""
+type StockLevel {
+  location: StockLocation
+  quantity: Int
+  updatedAt: DateTime
+  variant: ProductVariant
+}
+
+union StockLevelAdjustResult = AuthenticationError | NotFoundError | PermissionDeniedError | StockLevelPayload | ValidationError
+
+input StockLevelImportInput {
+  locationCode: String!
+  quantity: Int!
+  sku: String!
+}
+
+type StockLevelImportResult {
+  """Why the row was skipped; null when it was applied."""
+  error: String
+  locationCode: String
+  quantity: Int
+  sku: String
+}
+
+input StockLevelInput {
+  locationId: ID!
+  quantity: Int!
+}
+
+type StockLevelPayload {
+  stockLevel: StockLevel
+}
+
+union StockLevelSetResult = AuthenticationError | NotFoundError | PermissionDeniedError | StockLevelPayload | ValidationError
+
+type StockLevelsImportPayload {
+  applied: Int
+
+  """One per row, in input order."""
+  results: [StockLevelImportResult!]
+}
+
+union StockLevelsImportResult = AuthenticationError | NotFoundError | PermissionDeniedError | StockLevelsImportPayload | ValidationError
+
+type StockLocation implements Node {
+  city: String
+  code: String
+  countryCode: CountryCode
+  id: ID!
+  isActive: Boolean
+  name: String
+  postalCode: String
+}
+
+union StockLocationCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | StockLocationPayload | ValidationError
+
+input StockLocationInput {
+  city: String
+  code: String!
+  countryCode: CountryCode
+  isActive: Boolean
+  name: String!
+  postalCode: String
+}
+
+type StockLocationPayload {
+  stockLocation: StockLocation
+}
+
+"""The code is fixed once created."""
+input StockLocationUpdateInput {
+  city: String
+  countryCode: CountryCode
+  isActive: Boolean
+  name: String
+  postalCode: String
+}
+
+union StockLocationUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | StockLocationPayload | ValidationError
+
+type StockPayload {
+  stock: Stock
+}
+
+input StockUpdateInput {
+  """Replaces the locations, in sourcing priority order."""
+  locationIds: [ID!]
+  name: String
+}
+
+union StockUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | StockPayload | ValidationError
+
+"""Live updates over Server-Sent Events."""
+type Subscription {
+  """
+  Every order event in the store as it commits: new orders, payments, shipments, refunds.
+  """
+  orderActivity: OrderUpdate
+}
+
+input SubtotalConditionInput {
+  """Per currency; carts in other currencies do not match."""
+  amounts: [MoneyByCurrencyInput!]!
+  operator: ComparisonOperator!
+}
+
+input TableRateInput {
+  basis: ShippingRateBasis!
+  tiers: [ShippingRateTierInput!]!
+}
+
+type TaxClass implements Node {
+  code: String
+  id: ID!
+  kind: TaxClassKind
+  name: String
+}
+
+union TaxClassCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | TaxClassPayload | ValidationError
+
+union TaxClassDeleteResult = AuthenticationError | DeletePayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+input TaxClassInput {
+  code: String!
+  kind: TaxClassKind!
+  name: String!
+}
+
+enum TaxClassKind {
+  CUSTOMER
+  PRODUCT
+}
+
+type TaxClassPayload {
+  taxClass: TaxClass
+}
+
+union TaxClassUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | TaxClassPayload | ValidationError
+
+type TaxLine {
+  amount: Money
+  name: String
+
+  """Percent."""
+  rate: Float
+}
+
+type TaxRate implements Node {
+  code: String
+  countryCode: CountryCode
+  id: ID!
+  name: String
+  postalCodePattern: String
+
+  """Percent."""
+  rate: Float
+  regionCode: String
+}
+
+union TaxRateCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | TaxRatePayload | ValidationError
+
+union TaxRateDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input TaxRateInput {
+  code: String!
+  countryCode: CountryCode!
+  name: String!
+
+  """Glob, e.g. 9* or 10115."""
+  postalCodePattern: String
+
+  """Percent."""
+  rate: Float!
+  regionCode: String
+}
+
+type TaxRatePayload {
+  taxRate: TaxRate
+}
+
+input TaxRateUpdateInput {
+  name: String
+  postalCodePattern: String
+  rate: Float
+  regionCode: String
+}
+
+union TaxRateUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | TaxRatePayload | ValidationError
+
+type TaxRule implements Node {
+  customerTaxClasses: [TaxClass!]
+  id: ID!
+  name: String
+
+  """Equal priorities add; higher priorities compound."""
+  priority: Int
+  productTaxClasses: [TaxClass!]
+  taxRates: [TaxRate!]
+}
+
+union TaxRuleCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | TaxRulePayload | ValidationError
+
+union TaxRuleDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input TaxRuleInput {
+  customerTaxClassIds: [ID!]
+  name: String!
+  priority: Int
+  productTaxClassIds: [ID!]!
+  taxRateIds: [ID!]!
+}
+
+type TaxRulePayload {
+  taxRule: TaxRule
+}
+
+input TaxRuleUpdateInput {
+  customerTaxClassIds: [ID!]
+  name: String
+  priority: Int
+  productTaxClassIds: [ID!]
+  taxRateIds: [ID!]
+}
+
+union TaxRuleUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | TaxRulePayload | ValidationError
+
+"""What a template renders: product pages or category pages."""
+enum TemplateFor {
+  CATEGORY
+  PRODUCT
+}
+
+"""The template a product or category page renders with, and why."""
+type TemplateMatch {
+  """The category the template is assigned to, when source is CATEGORY."""
+  category: Category
+  page: Page
+  source: TemplateSource
+}
+
+enum TemplateSource {
+  """
+  Assigned to a category: for a product, the nearest of its categories and their parents; for a category, this one.
+  """
+  CATEGORY
+
+  """The default template."""
+  DEFAULT
+
+  """Assigned to this product."""
+  PRODUCT
+}
+
+"""
+What a template is assigned to. Each product, category and the default has one published template; a draft takes over its assignments when published.
+"""
+type TemplateTargets {
+  """
+  Product templates: the products in these categories and their subcategories. Category templates: these category pages.
+  """
+  categories: [Category!]
+
+  """
+  Renders every product (or category) page no other template is assigned to.
+  """
+  isDefault: Boolean
+
+  """Product templates: these products."""
+  products: [Product!]
+}
+
+"""
+Omitted fields are unchanged; lists replace the template's products or categories. A published template takes them over at once, a draft one when published.
+"""
+input TemplateTargetsInput {
+  """
+  Product templates: the products in these categories and their subcategories. Category templates: these category pages.
+  """
+  categoryIds: [ID!]
+
+  """
+  Make this the default template of its kind (the current default stops being one once this template is published), or stop being the default.
+  """
+  isDefault: Boolean
+
+  """Product templates only."""
+  productIds: [ID!]
+}
+
+type TierPrice {
+  minQuantity: Int
+  price: Money
+}
+
+union TokenRefreshResult = AuthenticationError | NotFoundError | PermissionDeniedError | SessionPayload | ValidationError
+
+type TrackingNumber {
+  carrier: String
+  number: String
+  url: String
+}
+
+input TrackingNumberInput {
+  carrier: String!
+  number: String!
+  url: String
+}
+
+"""A managed redirect. Slug changes create these automatically."""
+type UrlRedirect {
+  createdAt: DateTime
+  fromPath: String
+  id: ID
+  statusCode: Int
+
+  """A path, or an absolute URL for external targets."""
+  toPath: String
+}
+
+union UrlRedirectCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | UrlRedirectPayload | ValidationError
+
+union UrlRedirectDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input UrlRedirectInput {
+  fromPath: String!
+
+  """301 (default), 302, 307 or 308."""
+  statusCode: Int
+  toPath: String!
+}
+
+type UrlRedirectPayload {
+  urlRedirect: UrlRedirect
+}
+
+type ValidationError implements Error {
+  code: ErrorCode
+  fieldErrors: [FieldError!]
+  message: String
+}
+
+"""
+A stored price point: list, special (dated), tier (minQuantity) or customer-group price.
+"""
+type VariantPrice {
+  amount: Money
+  channel: Channel
+  compareAtAmount: Money
+  costAmount: Money
+  currencyCode: CurrencyCode
+  customerGroupId: ID
+  endsAt: DateTime
+  id: ID
+  minQuantity: Int
+  startsAt: DateTime
+}
+
+"""
+List price (no group, minQuantity 1, no dates), special price (dates), tier price (minQuantity) or group price.
+"""
+input VariantPriceInput {
+  amount: Decimal!
+  channelId: ID!
+  compareAtAmount: Decimal
+  costAmount: Decimal
+  currencyCode: CurrencyCode!
+  customerGroupId: ID
+  endsAt: DateTime
+  minQuantity: Int
+  startsAt: DateTime
+}
+
+"""Who is calling the admin API."""
+type Viewer {
+  apiKey: ApiKey
+  permissions: [String!]
+
+  """The signed-in staff user's preferences, all or by key."""
+  preferences(keys: [String!]): [StaffPreference!]
+  staffUser: StaffUser
+}
+
+type WebhookDelivery implements Node {
+  attempts: Int
+  createdAt: DateTime
+  deliveredAt: DateTime
+  eventId: ID
+  eventType: String
+  id: ID!
+  lastError: String
+  lastStatusCode: Int
+  nextAttemptAt: DateTime
+
+  """
+  The body this delivery sends, with secrets such as password reset tokens and links redacted.
+  """
+  payload: JSON
+  status: WebhookDeliveryStatus
+  subscription: WebhookSubscription
+}
+
+type WebhookDeliveryPayload {
+  webhookDelivery: WebhookDelivery
+}
+
+union WebhookDeliveryRetryResult = AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError | WebhookDeliveryPayload
+
+enum WebhookDeliveryStatus {
+  """Gave up; retry manually."""
+  DEAD
+
+  """Will retry with backoff."""
+  FAILED
+  PENDING
+  SUCCEEDED
+}
+
+type WebhookSubscription implements Node {
+  createdAt: DateTime
+  deliveries(limit: Int = 20): [WebhookDelivery!]
+  events: [String!]
+  id: ID!
+  isActive: Boolean
+  name: String
+  url: String
+}
+
+type WebhookSubscriptionCreatePayload {
+  """
+  Shown once. Verify X-Spindle-Signature: t=<ts>,v1=HMAC-SHA256(secret, "<ts>.<body>").
+  """
+  secret: String
+  webhookSubscription: WebhookSubscription
+}
+
+union WebhookSubscriptionCreateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError | WebhookSubscriptionCreatePayload
+
+union WebhookSubscriptionDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type WebhookSubscriptionPayload {
+  webhookSubscription: WebhookSubscription
+}
+
+union WebhookSubscriptionUpdateResult = AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError | WebhookSubscriptionPayload

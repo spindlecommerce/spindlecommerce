@@ -1,0 +1,19 @@
+# packages/plugin-sdk is @spindlecommerce/plugin-sdk here, the platform's own SDK. As a workspace
+# package it satisfies the peer dependency of plugins installed from npm, so they load the
+# platform's copy rather than the one on npm (docs/plugins.md).
+packages:
+  - packages/*
+# Plugins are added to the root package: `pnpm add @spindlecommerce/plugin-hello-world`, without -w.
+ignoreWorkspaceRootCheck: true
+# pnpm holds back versions younger than its minimum release age, and checks the lockfile against it
+# on every install. SpindleCommerce's own packages can be used as soon as they are released.
+minimumReleaseAgeExclude:
+  - "@spindlecommerce/*"
+
+allowBuilds:
+  # esbuild's platform binary arrives as an optional dependency; its install script is not needed.
+  esbuild: false
+
+overrides:
+  # @vercel/cli-config, under @vercel/blob and @vercel/functions, pins zod 4.1.11 (GHSA-mrhx-c7xc-m3w5).
+  "@vercel/cli-config>zod": ^4.6.7

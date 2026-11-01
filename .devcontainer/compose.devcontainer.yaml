@@ -1,0 +1,8 @@
+# Used by devcontainer.json. Dev Containers rebuilds a service with a `build:` section from a
+# generated Dockerfile that Buildx Bake refuses to read ("additional privileges requested"), so
+# initializeCommand builds the image with Compose and this file drops `build:` to use it.
+# For the same reason, add tools in the Dockerfile, not as dev container `features`.
+services:
+  app:
+    build: !reset null
+    image: ecom-app

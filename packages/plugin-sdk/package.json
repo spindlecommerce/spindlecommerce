@@ -1,0 +1,8 @@
+{
+  "name": "@spindlecommerce/plugin-sdk",
+  "version": "1.1.0",
+  "private": true,
+  "description": "The plugin API. Here it is the platform's own (src/plugins/sdk.ts); `pnpm sdk:package` builds the copy published to npm, with this version.",
+  "type": "module",
+  "exports": "./index.ts"
+}

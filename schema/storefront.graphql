@@ -1,0 +1,1453 @@
+"""
+Run the operation in a channel, locale and currency. Overrides the X-Channel, Accept-Language and X-Currency headers.
+"""
+directive @inContext(
+  """Channel code, e.g. eu."""
+  channel: String
+
+  """ISO 4217 code, e.g. GBP."""
+  currency: String
+
+  """BCP 47 locale, e.g. de-DE."""
+  locale: String
+) on MUTATION | QUERY | SUBSCRIPTION
+
+type AcceptedPayload {
+  accepted: Boolean
+}
+
+type Address {
+  city: String
+  company: String
+  countryCode: CountryCode
+  firstName: String
+  lastName: String
+  line1: String
+  line2: String
+  phone: String
+  postalCode: String
+  region: String
+  regionCode: String
+}
+
+"""
+An address as far as it is filled in: the country, and any of the rest. Blank fields are left out.
+"""
+input AddressDraftInput {
+  city: String
+  company: String
+  countryCode: CountryCode!
+  firstName: String
+  lastName: String
+  line1: String
+  line2: String
+  phone: String
+  postalCode: String
+  region: String
+  regionCode: String
+}
+
+input AddressInput {
+  city: String!
+  company: String
+  countryCode: CountryCode!
+  firstName: String!
+  lastName: String!
+  line1: String!
+  line2: String
+  phone: String
+  postalCode: String!
+  region: String
+  regionCode: String
+}
+
+type AppliedDiscount {
+  amount: Money
+  couponCode: String
+  name: String
+}
+
+type AttributeDefinition implements Node {
+  code: String
+  id: ID!
+  isFilterable: Boolean
+  isLocalized: Boolean
+  isRequired: Boolean
+  isSearchable: Boolean
+  label: String
+  options: [AttributeOption!]
+  position: Int
+  type: AttributeType
+  unit: String
+}
+
+input AttributeFilterInput {
+  code: String!
+  values: [String!]!
+}
+
+type AttributeOption {
+  code: String
+  label: String
+  swatch: String
+}
+
+enum AttributeType {
+  BOOLEAN
+  DATE
+  MULTISELECT
+  NUMBER
+  RICH_TEXT
+  SELECT
+  TEXT
+}
+
+type AuthenticationError implements Error {
+  code: ErrorCode
+  message: String
+}
+
+"""
+Guest carts are addressed by their unguessable id; a customer's cart is visible only to that customer.
+"""
+type Cart implements Node {
+  availablePaymentMethods: [PaymentMethodOption!]
+
+  """
+  Rates for the current contents, once the shipping address has a country and postal code. Carriers' rates need the whole address.
+  """
+  availableShippingMethods: [ShippingRate!]
+
+  """
+  The cart's own billing address, or else the shipping address (billingSameAsShipping). As far as it is filled in.
+  """
+  billingAddress: Address
+
+  """
+  True while the cart has no billing address of its own and bills to the shipping address, the default.
+  """
+  billingSameAsShipping: Boolean
+  checkoutReady: Boolean
+  cost: CartCost
+  coupons: [CartCoupon!]
+  createdAt: DateTime
+  currencyCode: CurrencyCode
+  customer: Customer
+  discounts: [AppliedDiscount!]
+  email: EmailAddress
+  id: ID!
+
+  """False once the cart became an order."""
+  isOpen: Boolean
+  lines: [CartLine!]
+  locale: LocaleCode
+
+  """Empty when the cart can be checked out."""
+  missing: [CartRequirement!]
+  order: Order
+  requiresShipping: Boolean
+  selectedPaymentMethod: PaymentMethodOption
+
+  """The shopper's choice while it is available, else the cheapest rate."""
+  selectedShippingMethod: ShippingRate
+
+  """As far as it is filled in."""
+  shippingAddress: Address
+  totalQuantity: Int
+  updatedAt: DateTime
+
+  """Increments on every change."""
+  version: Int
+}
+
+"""Exactly one: an address, or a saved address of the signed-in customer."""
+input CartAddressInput @oneOf {
+  address: AddressInput
+  customerAddressId: ID
+}
+
+union CartAssignToCustomerResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+input CartBillingAddressInput @oneOf {
+  address: AddressInput
+  customerAddressId: ID
+  sameAsShipping: Boolean
+}
+
+union CartBillingAddressSetResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+"""
+Totals from the pricing pipeline: subtotal → discounts → shipping → shipping discount → tax → total.
+"""
+type CartCost {
+  """Line discounts plus shipping discount."""
+  discountTotal: Money
+  pricesIncludeTax: Boolean
+
+  """After shipping discounts."""
+  shipping: Money
+  shippingDiscount: Money
+  subtotal: Money
+  tax: Money
+  taxLines: [TaxLine!]
+  total: Money
+}
+
+type CartCoupon {
+  applied: Boolean
+  code: String
+
+  """Why the coupon currently gives no discount."""
+  reason: String
+}
+
+union CartCouponApplyResult = AuthenticationError | CartPayload | CouponNotApplicableError | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+union CartCouponRemoveResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+input CartCreateInput {
+  email: EmailAddress
+  lines: [CartLineInput!]
+}
+
+union CartCreateResult = AuthenticationError | CartPayload | InsufficientStockError | NotFoundError | PermissionDeniedError | ValidationError
+
+union CartEmailUpdateResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type CartLine {
+  compareAtUnitPrice: Money
+  discount: Money
+  id: ID
+  issue: CartLineIssue
+  name: String
+  product: Product
+  quantity: Int
+  quantityAvailable: Int
+  subtotal: Money
+  tax: Money
+  total: Money
+  unitPrice: Money
+  variant: ProductVariant
+}
+
+"""
+One product variant, by id or SKU. Works the same for every product type.
+"""
+input CartLineInput {
+  quantity: Int!
+  sku: String
+  variantId: ID
+}
+
+type CartLineIssue {
+  code: CartLineIssueCode
+  message: String
+}
+
+enum CartLineIssueCode {
+  INSUFFICIENT_STOCK
+  NO_PRICE
+  OUT_OF_STOCK
+  UNAVAILABLE
+}
+
+input CartLineUpdateInput {
+  lineId: ID!
+
+  """0 removes the line."""
+  quantity: Int!
+}
+
+union CartLinesAddResult = AuthenticationError | CartPayload | InsufficientStockError | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+union CartLinesRemoveResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+union CartLinesUpdateResult = AuthenticationError | CartPayload | InsufficientStockError | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type CartNotReadyError implements Error {
+  code: ErrorCode
+
+  """
+  The same, field by field. Paths follow the storefront's cartUpdate input: ["shippingAddress", "address", "postalCode"] is a postal code still to give.
+  """
+  fieldErrors: [FieldError!]
+  message: String
+  missing: [CartRequirement!]
+}
+
+type CartPayload {
+  cart: Cart
+}
+
+union CartPaymentMethodSetResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+"""
+The payment the cart's provider prepared for its current total, for the provider's own payment form in the browser.
+"""
+type CartPaymentSession {
+  amount: Money
+
+  """
+  Provider data for the browser, e.g. Stripe's { clientSecret, publishableKey }.
+  """
+  clientData: JSON
+  methodCode: String
+  provider: String
+}
+
+union CartPaymentSessionCreateResult = AuthenticationError | CartNotReadyError | CartPaymentSessionPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type CartPaymentSessionPayload {
+  session: CartPaymentSession
+}
+
+"""Something a cart still needs before it can be checked out."""
+enum CartRequirement {
+  BILLING_ADDRESS
+  EMAIL
+  LINES
+
+  """A line is unavailable, unpriced or short on stock."""
+  LINE_ISSUES
+  PAYMENT_METHOD
+  SHIPPING_ADDRESS
+  SHIPPING_METHOD
+}
+
+union CartShippingAddressSetResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+union CartShippingMethodSetResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+"""
+Exactly one: an address, complete or not, or a saved address of the signed-in customer.
+"""
+input CartUpdateAddressInput @oneOf {
+  address: AddressDraftInput
+  customerAddressId: ID
+}
+
+"""
+Exactly one: an address, complete or not, a saved address of the signed-in customer, or sameAsShipping: true to bill to the shipping address.
+"""
+input CartUpdateBillingAddressInput @oneOf {
+  address: AddressDraftInput
+  customerAddressId: ID
+  sameAsShipping: Boolean
+}
+
+"""
+Checkout details to set, in any combination. Omitted fields stay as they are; null clears one.
+"""
+input CartUpdateInput {
+  billingAddress: CartUpdateBillingAddressInput
+
+  """
+  Switch to another of the channel's currencies (Channel.currencies). Prices, shipping and tax follow; a chosen shipping or payment method no longer offered is dropped.
+  """
+  currencyCode: CurrencyCode
+  email: EmailAddress
+
+  """
+  Move the cart to another of its channel's languages (Channel.locales): line names, and the emails for its order.
+  """
+  locale: LocaleCode
+
+  """A code from availablePaymentMethods."""
+  paymentMethodCode: String
+  shippingAddress: CartUpdateAddressInput
+
+  """
+  A code from availableShippingMethods. Null goes back to the cheapest rate.
+  """
+  shippingMethodCode: String
+}
+
+union CartUpdateResult = AuthenticationError | CartPayload | InvalidStateError | NotFoundError | PermissionDeniedError | ValidationError
+
+type Category implements Node {
+  """Root first, for breadcrumbs. Excludes this category."""
+  ancestors: [Category!]
+  children: [Category!]
+  depth: Int
+  description: String
+  id: ID!
+  name: String
+  parent: Category
+
+  """Slugs from the root, e.g. "men/mens-shirts"."""
+  path: String
+  position: Int
+  products(
+    after: String
+    before: String
+    filter: ProductFilter
+    first: Int
+    last: Int
+
+    """Full-text search with prefix matching, e.g. "trail run"."""
+    query: String
+
+    """
+    Defaults to RELEVANCE with a query, then to FEATURED in a category's listing, otherwise NEWEST.
+    """
+    sort: ProductSortInput
+  ): ProductConnection
+
+  """
+  This category's own sections, to render with the category as data where its template places the category sections component. Null when it has none. Drafts appear only with a preview token.
+  """
+  sections: Page
+  slug: String
+
+  """
+  The page builder template for this category's page: the one assigned to the category, else the default. Render its content with the category as data. Null means none: use your built-in layout. Drafts appear only with a preview token.
+  """
+  template: Page
+}
+
+type Channel implements Node {
+  code: String
+
+  """Countries this channel sells to."""
+  countries: [Country!]
+  currencies: [CurrencyCode!]
+  defaultCurrency: CurrencyCode
+  defaultLocale: LocaleCode
+  id: ID!
+  locales: [LocaleCode!]
+  name: String
+  pricesIncludeTax: Boolean
+}
+
+type CheckoutPayload {
+  order: Order
+}
+
+union CheckoutPlaceOrderResult = AuthenticationError | CartNotReadyError | CheckoutPayload | InsufficientStockError | InvalidStateError | NotFoundError | PaymentDeclinedError | PermissionDeniedError | ValidationError
+
+type Country {
+  code: CountryCode
+
+  """In the request locale."""
+  name: String
+}
+
+"""ISO 3166-1 alpha-2 country code, e.g. DE."""
+scalar CountryCode
+
+type CouponNotApplicableError implements Error {
+  code: ErrorCode
+  couponCode: String
+  message: String
+  reason: String
+}
+
+"""ISO 4217 currency code, e.g. USD."""
+scalar CurrencyCode
+
+type Customer implements Node {
+  acceptsMarketing: Boolean
+
+  """The customer's open cart in the current channel."""
+  activeCart: Cart
+  addresses: [CustomerAddress!]
+  createdAt: DateTime
+
+  """YYYY-MM-DD."""
+  dateOfBirth: String
+  defaultBillingAddress: CustomerAddress
+  defaultShippingAddress: CustomerAddress
+  email: EmailAddress
+  firstName: String
+  id: ID!
+  lastName: String
+
+  """Newest first."""
+  orders(after: String, before: String, first: Int, last: Int, status: OrderStatus): CustomerOrdersConnection
+  phone: String
+}
+
+type CustomerAddress implements Node {
+  address: Address
+  id: ID!
+  isDefaultBilling: Boolean
+  isDefaultShipping: Boolean
+}
+
+union CustomerAddressCreateResult = AuthenticationError | CustomerAddressPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union CustomerAddressDeleteResult = AuthenticationError | DeletePayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input CustomerAddressInput {
+  address: AddressInput!
+  isDefaultBilling: Boolean
+  isDefaultShipping: Boolean
+}
+
+type CustomerAddressPayload {
+  address: CustomerAddress
+  customer: Customer
+}
+
+union CustomerAddressUpdateResult = AuthenticationError | CustomerAddressPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type CustomerAuthPayload {
+  """Set when a guest cartId was passed: the merged customer cart."""
+  cart: Cart
+  customer: Customer
+  session: Session
+}
+
+union CustomerLoginResult = AuthenticationError | CustomerAuthPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type CustomerOrdersConnection {
+  edges: [CustomerOrdersConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type CustomerOrdersConnectionEdge {
+  cursor: String!
+  node: Order
+}
+
+union CustomerPasswordChangeResult = AuthenticationError | CustomerPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+union CustomerPasswordResetRequestResult = AcceptedPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+union CustomerPasswordResetResult = AuthenticationError | CustomerPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+type CustomerPayload {
+  customer: Customer
+}
+
+input CustomerRegisterInput {
+  acceptsMarketing: Boolean
+  dateOfBirth: String
+  email: EmailAddress!
+  firstName: String!
+  lastName: String!
+  password: String!
+  phone: String
+}
+
+union CustomerRegisterResult = AuthenticationError | CustomerAuthPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+input CustomerUpdateInput {
+  acceptsMarketing: Boolean
+  dateOfBirth: String
+  firstName: String
+  lastName: String
+  phone: String
+}
+
+union CustomerUpdateResult = AuthenticationError | CustomerPayload | NotFoundError | PermissionDeniedError | ValidationError
+
+"""ISO 8601 date-time in UTC."""
+scalar DateTime
+
+"""
+Exact decimal amount as a string, e.g. "19.99". Money never uses floats.
+"""
+scalar Decimal
+
+type DeletePayload {
+  deletedId: ID
+}
+
+type DocumentLine {
+  orderLine: OrderLine
+  quantity: Int
+}
+
+"""An email address."""
+scalar EmailAddress
+
+"""
+Implemented by every expected failure. Query `... on Error { code message }` to handle any of them.
+"""
+interface Error {
+  code: ErrorCode
+  message: String
+}
+
+"""Stable machine-readable error codes."""
+enum ErrorCode {
+  CART_NOT_READY
+  CONFLICT
+  COUPON_NOT_APPLICABLE
+  INSUFFICIENT_STOCK
+  INVALID_STATE
+  NOT_FOUND
+  PAYMENT_DECLINED
+  PERMISSION_DENIED
+  UNAUTHENTICATED
+  VALIDATION_FAILED
+}
+
+type Facet {
+  attribute: AttributeDefinition
+  values: [FacetValue!]
+}
+
+type FacetValue {
+  """Products matching if this value were (also) selected."""
+  count: Int
+  label: String
+  selected: Boolean
+  swatch: String
+
+  """Pass this in `filter.attributes` to select it."""
+  value: String
+}
+
+"""One invalid input field, addressed by its path from the argument root."""
+type FieldError {
+  message: String
+  path: [String!]
+}
+
+"""A shipment of some or all of an order's items."""
+type Fulfillment {
+  createdAt: DateTime
+  id: ID
+  lines: [DocumentLine!]
+  number: String
+  status: String
+  tracking: [TrackingNumber!]
+}
+
+enum FulfillmentStatus {
+  FULFILLED
+  PARTIALLY_FULFILLED
+  UNFULFILLED
+}
+
+type InsufficientStockError implements Error {
+  available: Int
+  code: ErrorCode
+  message: String
+  requested: Int
+  sku: String
+  variantId: ID
+}
+
+type InvalidStateError implements Error {
+  code: ErrorCode
+  message: String
+}
+
+"""An invoice: a captured payment."""
+type Invoice {
+  amount: Money
+  createdAt: DateTime
+  id: ID
+  number: String
+}
+
+"""Arbitrary JSON value."""
+scalar JSON
+
+"""BCP 47 locale, e.g. de-DE."""
+scalar LocaleCode
+
+"""
+The scope this request runs in, set with @inContext or the X-Channel / Accept-Language / X-Currency headers.
+"""
+type Localization {
+  channel: Channel
+  currencyCode: CurrencyCode
+  locale: LocaleCode
+}
+
+union LogoutResult = AcceptedPayload | AuthenticationError | NotFoundError | PermissionDeniedError | ValidationError
+
+type Media implements Node {
+  alt: String
+  id: ID!
+  kind: MediaKind
+  position: Int
+  url: String
+  variant: ProductVariant
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+"""An exact amount in a currency."""
+type Money {
+  amount: Decimal
+  currencyCode: CurrencyCode
+
+  """Formatted for the request locale, e.g. "19,99 €"."""
+  formatted: String
+}
+
+"""
+Entry point for writes. Every mutation returns a result union: the payload or a typed error.
+"""
+type Mutation {
+  """
+  Adopt a guest cart after sign-in, merging it into the customer's open cart if there is one.
+  """
+  cartAssignToCustomer(cartId: ID!): CartAssignToCustomerResult
+  cartBillingAddressSet(address: CartBillingAddressInput!, cartId: ID!): CartBillingAddressSetResult @deprecated(reason: "Use cartUpdate, which sets any checkout details in one call and takes incomplete addresses.")
+
+  """
+  Fails with CouponNotApplicableError (and a reason) unless the coupon is valid and its promotion applies to the cart.
+  """
+  cartCouponApply(cartId: ID!, code: String!): CartCouponApplyResult
+  cartCouponRemove(cartId: ID!, code: String!): CartCouponRemoveResult
+
+  """
+  Create a cart in the request's channel and currency; signed-in customers own it.
+  """
+  cartCreate(input: CartCreateInput): CartCreateResult
+  cartEmailUpdate(cartId: ID!, email: EmailAddress!): CartEmailUpdateResult @deprecated(reason: "Use cartUpdate, which sets any checkout details in one call and takes incomplete addresses.")
+
+  """
+  Add variants; quantities add up for variants already in the cart. Checked against salable stock.
+  """
+  cartLinesAdd(cartId: ID!, lines: [CartLineInput!]!): CartLinesAddResult
+  cartLinesRemove(cartId: ID!, lineIds: [ID!]!): CartLinesRemoveResult
+  cartLinesUpdate(cartId: ID!, lines: [CartLineUpdateInput!]!): CartLinesUpdateResult
+  cartPaymentMethodSet(cartId: ID!, paymentMethodCode: String!): CartPaymentMethodSetResult @deprecated(reason: "Use cartUpdate, which sets any checkout details in one call and takes incomplete addresses.")
+
+  """
+  Start the payment with the selected method's provider for the cart's total (e.g. a Stripe PaymentIntent) when its sessionRequired is true. Call again after the total changes to update the same payment. See docs/payments.md.
+  """
+  cartPaymentSessionCreate(cartId: ID!): CartPaymentSessionCreateResult
+  cartShippingAddressSet(address: CartAddressInput!, cartId: ID!): CartShippingAddressSetResult @deprecated(reason: "Use cartUpdate, which sets any checkout details in one call and takes incomplete addresses.")
+  cartShippingMethodSet(cartId: ID!, shippingMethodCode: String!): CartShippingMethodSetResult @deprecated(reason: "Use cartUpdate, which sets any checkout details in one call and takes incomplete addresses.")
+
+  """
+  Set any checkout details, in any order and as often as the shopper changes them. Addresses may be incomplete: rates and tax follow once the shipping address has a country and postal code, and checkout reports the rest (CartNotReadyError.fieldErrors). The cheapest rate is selected until the shopper picks one; billing follows shipping unless the cart has its own. Every invalid field is reported at once; nothing is saved unless all are valid.
+  """
+  cartUpdate(cartId: ID!, input: CartUpdateInput!): CartUpdateResult
+
+  """
+  Turn a ready cart into an order: re-price, reserve stock, authorize payment. `input` is saved first, as cartUpdate saves it, so one call can do everything. Retries return the same order: with the same idempotencyKey, or any key once the cart is an order. A declined payment releases stock and reopens the cart. With a payment session, confirm the payment in the browser first and pass an empty payment.
+  """
+  checkoutPlaceOrder(
+    cartId: ID!
+
+    """Client-generated, e.g. a UUID per checkout attempt."""
+    idempotencyKey: String!
+
+    """Checkout details to save before placing the order."""
+    input: CartUpdateInput
+    payment: PaymentDataInput
+  ): CheckoutPlaceOrderResult
+
+  """
+  Storefront: the signed-in customer's address book. Admin: any customer's, by customerId.
+  """
+  customerAddressCreate(input: CustomerAddressInput!): CustomerAddressCreateResult
+  customerAddressDelete(id: ID!): CustomerAddressDeleteResult
+  customerAddressUpdate(id: ID!, input: CustomerAddressInput!): CustomerAddressUpdateResult
+
+  """Sign in. A guest cartId is merged into the customer's open cart."""
+  customerLogin(cartId: ID, email: EmailAddress!, password: String!): CustomerLoginResult
+  customerPasswordChange(currentPassword: String!, newPassword: String!): CustomerPasswordChangeResult
+
+  """
+  Set a new password with a reset token. Signs the customer out everywhere.
+  """
+  customerPasswordReset(newPassword: String!, token: String!): CustomerPasswordResetResult
+
+  """
+  Always accepted, never revealing whether the account exists. Emits customer.password_reset_requested to plugins (the email plugin sends the link), not webhooks.
+  """
+  customerPasswordResetRequest(email: EmailAddress!): CustomerPasswordResetRequestResult
+
+  """Create an account and sign in. Pass a guest cartId to keep the cart."""
+  customerRegister(cartId: ID, input: CustomerRegisterInput!): CustomerRegisterResult
+
+  """
+  Storefront: update the signed-in customer. Admin: update any customer by id.
+  """
+  customerUpdate(input: CustomerUpdateInput!): CustomerUpdateResult
+
+  """Revoke the refresh token and every token rotated from it."""
+  logout(refreshToken: String!): LogoutResult
+
+  """
+  Cancel an unshipped, uncaptured order (customers: their own). Voids the authorization and releases reserved stock.
+  """
+  orderCancel(orderId: ID!, reason: String): OrderCancelResult
+
+  """
+  Exchange a refresh token for a new session. Refresh tokens are single use; replaying one revokes the whole session family.
+  """
+  tokenRefresh(refreshToken: String!): TokenRefreshResult
+}
+
+interface Node {
+  id: ID!
+}
+
+type NotFoundError implements Error {
+  code: ErrorCode
+  message: String
+  resource: String
+}
+
+type Order implements Node {
+  billingAddress: Address
+
+  """Open, unshipped and not yet charged."""
+  canCancel: Boolean
+  canceledAt: DateTime
+  completedAt: DateTime
+  couponCodes: [String!]
+  currencyCode: CurrencyCode
+  email: EmailAddress
+  fulfillmentStatus: FulfillmentStatus
+  fulfillments: [Fulfillment!]
+  id: ID!
+  invoices: [Invoice!]
+  lines: [OrderLine!]
+  locale: LocaleCode
+  number: String
+  paymentMethodCode: String
+  paymentStatus: PaymentStatus
+  placedAt: DateTime
+  refunds: [Refund!]
+  shippingAddress: Address
+  shippingMethod: OrderShippingMethod
+  status: OrderStatus
+  totals: OrderTotals
+}
+
+union OrderCancelResult = AuthenticationError | InvalidStateError | NotFoundError | OrderPayload | PermissionDeniedError | ValidationError
+
+type OrderDiscount {
+  amount: Money
+  couponCode: String
+  name: String
+}
+
+type OrderLine {
+  discount: Money
+  id: ID
+  name: String
+  product: Product
+  quantity: Int
+  quantityCanceled: Int
+  quantityFulfilled: Int
+  quantityRefunded: Int
+  sku: String
+  subtotal: Money
+  tax: Money
+  taxRate: Float
+  total: Money
+  unitPrice: Money
+
+  """Null if the variant was deleted since."""
+  variant: ProductVariant
+
+  """Snapshot of the variant's options when ordered."""
+  variantAttributes: JSON
+}
+
+type OrderPayload {
+  order: Order
+}
+
+type OrderShippingMethod {
+  carrier: String
+  code: String
+  name: String
+  price: Money
+}
+
+enum OrderStatus {
+  CANCELED
+  COMPLETED
+  OPEN
+}
+
+type OrderTaxLine {
+  amount: Money
+  name: String
+  rate: Float
+}
+
+type OrderTotals {
+  discountTotal: Money
+  discounts: [OrderDiscount!]
+  paid: Money
+  pricesIncludeTax: Boolean
+  refunded: Money
+  shipping: Money
+  subtotal: Money
+  tax: Money
+  taxLines: [OrderTaxLine!]
+  total: Money
+}
+
+type OrderUpdate {
+  """e.g. order.fulfilled"""
+  eventType: String
+
+  """As of this event."""
+  fulfillmentStatus: FulfillmentStatus
+  occurredAt: DateTime
+
+  """The order now."""
+  order: Order
+
+  """As of this event."""
+  paymentStatus: PaymentStatus
+
+  """As of this event."""
+  status: OrderStatus
+}
+
+"""
+A page built from components. Storefronts get the published version, or the draft with a preview token.
+"""
+type Page implements Node {
+  """
+  The component tree in the request locale: { id, component, variation, fields }, with blocks fields holding child nodes and list fields holding { id, fields } items. Hidden components and those not targeted at this channel, locale or time are left out. Links are { kind, href, id, newTab }; products and categories are global ids, resolved in references.
+  """
+  content: JSON
+  id: ID!
+
+  """
+  True when this is unpublished draft content, served for a preview token.
+  """
+  isPreview: Boolean
+
+  """
+  Where the page is served; null for content types without paths (header, footer, templates).
+  """
+  path: String
+  publishedAt: DateTime
+  references: PageReferences
+
+  """
+  Set for a product's or category's own sections (Product.sections, Category.sections): which of the two they belong to.
+  """
+  sectionsFor: TemplateFor
+  seo: PageSeo
+
+  """
+  Set for templates: product or category pages render with this page, with the product or category as data for its components.
+  """
+  templateFor: TemplateFor
+  title: String
+
+  """The content type's code, e.g. landing_page."""
+  type: String
+  updatedAt: DateTime
+}
+
+type PageImage {
+  alt: String
+  height: Int
+  url: String
+  width: Int
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+"""A page linked from content: where it is served and its title."""
+type PageLink {
+  id: ID
+  path: String
+  title: String
+}
+
+"""
+Objects the content refers to by id, so one request renders the whole page.
+"""
+type PageReferences {
+  categories: [Category!]
+  pages: [PageLink!]
+
+  """
+  Products the storefront may show; unpublished ones are left out (render nothing for them).
+  """
+  products: [Product!]
+}
+
+"""Search and sharing metadata, in the request locale."""
+type PageSeo {
+  description: String
+  image: PageImage
+  noIndex: Boolean
+
+  """Falls back to nothing; frontends usually use the page title."""
+  title: String
+}
+
+enum PageSort {
+  """By path (the site's structure)."""
+  PATH
+
+  """
+  Most recently changed first (admin: draft saves; storefront: publishes).
+  """
+  UPDATED
+}
+
+enum PageStatus {
+  """Live, with draft changes not yet published."""
+  CHANGED
+
+  """Never published."""
+  DRAFT
+
+  """Live, with no unpublished changes."""
+  PUBLISHED
+
+  """Will publish at scheduledAt."""
+  SCHEDULED
+}
+
+"""
+Provider-specific payment data, e.g. a tokenized card from the PSP's client SDK. Never raw card numbers.
+"""
+input PaymentDataInput {
+  token: String
+}
+
+type PaymentDeclinedError implements Error {
+  code: ErrorCode
+  declineCode: String
+  message: String
+}
+
+type PaymentMethodOption {
+  code: String
+  instructions: String
+  name: String
+
+  """The payment provider behind the method, e.g. stripe, offline."""
+  provider: String
+
+  """
+  Start a payment session (cartPaymentSessionCreate) and confirm the payment in the browser before placing the order.
+  """
+  sessionRequired: Boolean
+}
+
+enum PaymentStatus {
+  AUTHORIZED
+  PAID
+  PARTIALLY_PAID
+  PARTIALLY_REFUNDED
+
+  """Awaiting payment (e.g. bank transfer)."""
+  PENDING
+  REFUNDED
+  VOIDED
+}
+
+type PermissionDeniedError implements Error {
+  code: ErrorCode
+  message: String
+  permission: String
+}
+
+"""
+A preview of draft content. In the storefront API this describes the request's x-preview-token.
+"""
+type PreviewSession {
+  """
+  The admin's origin: the only window the visual editing bridge talks to.
+  """
+  adminOrigin: String
+
+  """Scheduled content is shown as of this time."""
+  at: String
+  expiresAt: DateTime
+}
+
+"""Inclusive bounds in the request currency."""
+input PriceFilterInput {
+  max: Decimal
+  min: Decimal
+}
+
+type PriceRange {
+  maximum: Money
+  minimum: Money
+}
+
+type Product implements Node {
+  """Product-level attributes (variant axes are under `options`)."""
+  attributes: [ProductAttribute!]
+  categories: [Category!]
+  createdAt: DateTime
+
+  """HTML."""
+  description: String
+  id: ID!
+
+  """Whether any variant can be bought now."""
+  isAvailable: Boolean
+  media: [Media!]
+  name: String
+  options: [ProductOption!]
+  priceRange: ProductPriceRange
+
+  """
+  This product's own sections, to render with the product as data where its template places the product sections component. Null when it has none. Drafts appear only with a preview token.
+  """
+  sections: Page
+  seo: Seo
+  slug: String
+
+  """
+  The page builder template for this product's page: the one assigned to the product, else its nearest category's, else the default. Render its content with the product as data. Null means none: use your built-in layout. Drafts appear only with a preview token.
+  """
+  template: Page
+
+  """
+  The variant matching every selected option, e.g. color=blue and size=m.
+  """
+  variant(selectedOptions: [SelectedOptionInput!]!): ProductVariant
+  variants: [ProductVariant!]
+}
+
+"""A typed attribute value, already formatted for the request locale."""
+type ProductAttribute {
+  attribute: AttributeDefinition
+
+  """Selected options for select and multiselect attributes."""
+  options: [AttributeOption!]
+  raw: JSON
+
+  """Display value, e.g. "Organic cotton" or "Blue, Green"."""
+  value: String
+}
+
+type ProductConnection {
+  edges: [ProductEdge]
+
+  """
+  Counts per filterable attribute value. Disjunctive: selecting a value keeps its siblings' counts.
+  """
+  facets: [Facet!]
+  pageInfo: PageInfo!
+
+  """
+  Price span of all matches, ignoring the price filter (for range sliders).
+  """
+  priceRange: PriceRange
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type ProductEdge {
+  cursor: String!
+  node: Product
+}
+
+input ProductFilter {
+  """Values within one attribute are ORed; attributes are ANDed."""
+  attributes: [AttributeFilterInput!]
+
+  """Includes products in descendant categories."""
+  categoryId: ID
+  ids: [ID!]
+  inStock: Boolean
+  price: PriceFilterInput
+}
+
+"""
+A variant axis (e.g. Size) with the values that exist among the product's variants.
+"""
+type ProductOption {
+  attribute: AttributeDefinition
+  values: [AttributeOption!]
+}
+
+"""Prices for the request's channel, currency and customer group."""
+type ProductPriceRange {
+  compareAtMinVariantPrice: Money
+  maxVariantPrice: Money
+  minVariantPrice: Money
+}
+
+enum ProductSortField {
+  """
+  A category's merchandised listing: its pinned products in order, then the rest newest first. Elsewhere, newest first. Storefront only.
+  """
+  FEATURED
+  NAME
+  NEWEST
+  PRICE
+  RELEVANCE
+}
+
+input ProductSortInput {
+  """
+  Defaults to DESC for NEWEST and RELEVANCE (newest, best match first) and ASC for NAME and PRICE. FEATURED ignores it.
+  """
+  direction: SortDirection
+  field: ProductSortField!
+}
+
+type ProductVariant implements Node {
+  compareAtPrice: Money
+  id: ID!
+  isAvailable: Boolean
+  media: [Media!]
+
+  """
+  Product name with the variant's options, e.g. "Oxford Shirt – Blue / M".
+  """
+  name: String
+  price: Money
+  product: Product
+
+  """
+  Salable quantity in the channel's stock; null when the variant does not track inventory.
+  """
+  quantityAvailable: Int
+  selectedOptions: [SelectedOption!]
+  sku: String
+  tierPrices: [TierPrice!]
+  weightGrams: Int
+}
+
+"""Entry point for reads."""
+type Query {
+  """All attribute definitions, e.g. to render filters."""
+  attributeDefinitions: [AttributeDefinition!]
+  cart(id: ID!): Cart
+  category(id: ID, slug: String): Category
+
+  """Root categories; walk `children` for the tree."""
+  categoryTree: [Category!]
+
+  """Order status for guests: all three values must match."""
+  guestOrder(email: EmailAddress!, number: String!, postalCode: String!): Order
+  localization: Localization
+
+  """The signed-in customer, or null for anonymous requests."""
+  me: Customer
+
+  """Refetch any object by its global id."""
+  node(id: ID!): Node
+
+  """Refetch several objects by global id, in order."""
+  nodes(ids: [ID!]!): [Node]!
+
+  """By number. Storefront: the signed-in customer's orders only."""
+  order(number: String!): Order
+
+  """
+  Storefront: the page served at a path (draft content with a preview token). Admin: by id or path.
+  """
+  page(id: ID, path: String): Page
+
+  """
+  Pages by path. Storefront: published pages served in the channel (e.g. for a sitemap or a journal index). Admin: every page; status filters the admin list.
+  """
+  pages(
+    after: String
+    before: String
+    first: Int
+    last: Int
+
+    """Part of the path or title."""
+    query: String
+
+    """Defaults to PATH."""
+    sort: PageSort
+
+    """Admin only; the storefront lists published pages."""
+    status: PageStatus
+
+    """A content type's code."""
+    type: String
+  ): QueryPagesConnection
+
+  """
+  The request's preview, from its x-preview-token header; null without one. Frontends call it to validate a token before enabling draft mode.
+  """
+  previewSession: PreviewSession
+
+  """
+  Look up a product by exactly one of id, slug (in the request locale) or a variant SKU.
+  """
+  product(id: ID, sku: String, slug: String): Product
+
+  """
+  Storefront: full-text search with facets over the channel's published catalog. Admin: every product, newest first, or by name or lowest base price with `sort`.
+  """
+  products(
+    after: String
+    before: String
+    filter: ProductFilter
+    first: Int
+    last: Int
+
+    """Full-text search with prefix matching, e.g. "trail run"."""
+    query: String
+
+    """
+    Defaults to RELEVANCE with a query, then to FEATURED in a category's listing, otherwise NEWEST.
+    """
+    sort: ProductSortInput
+  ): ProductConnection
+
+  """
+  What a storefront path serves: a builder page at exactly that path; a product at /products/<slug> or a category at /categories/<slug path>, redirecting when a slug moved or the parents differ; otherwise a product or category by the last segment, else a redirect.
+  """
+  route(path: String!): RouteResult
+
+  """
+  The one page of a singleton content type, e.g. site_header or site_footer.
+  """
+  singletonPage(type: String!): Page
+}
+
+type QueryPagesConnection {
+  edges: [QueryPagesConnectionEdge]
+  pageInfo: PageInfo!
+
+  """Total matching items across all pages."""
+  totalCount: Int
+}
+
+type QueryPagesConnectionEdge {
+  cursor: String!
+  node: Page
+}
+
+"""The path moved; send the shopper to `location`."""
+type Redirect {
+  location: String
+  statusCode: Int
+}
+
+"""A refund: money returned to the customer."""
+type Refund {
+  amount: Money
+  createdAt: DateTime
+  id: ID
+  lines: [RefundLine!]
+  number: String
+  reason: String
+  shippingAmount: Money
+}
+
+type RefundLine {
+  amount: Money
+  orderLine: OrderLine
+  quantity: Int
+  restocked: Boolean
+}
+
+union RouteResult = Category | Page | Product | Redirect
+
+"""One variant axis value, e.g. Color: Blue."""
+type SelectedOption {
+  """Attribute code, e.g. color."""
+  attribute: String
+
+  """Option label in the request locale."""
+  label: String
+
+  """Attribute label in the request locale."""
+  name: String
+  swatch: String
+
+  """Option code, e.g. blue."""
+  value: String
+}
+
+input SelectedOptionInput {
+  attribute: String!
+  value: String!
+}
+
+type Seo {
+  description: String
+  title: String
+}
+
+"""
+A signed-in session: a short-lived access token and a single-use refresh token.
+"""
+type Session {
+  accessToken: String
+  accessTokenExpiresAt: DateTime
+  refreshToken: String
+  refreshTokenExpiresAt: DateTime
+}
+
+type SessionPayload {
+  session: Session
+}
+
+type ShippingRate {
+  carrier: String
+  code: String
+  description: String
+  maxDeliveryDays: Int
+  minDeliveryDays: Int
+  name: String
+  price: Money
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+"""Live updates over Server-Sent Events."""
+type Subscription {
+  """
+  Status changes of one of the signed-in customer's orders, after they commit.
+  """
+  orderUpdated(orderId: ID!): OrderUpdate
+}
+
+type TaxLine {
+  amount: Money
+  name: String
+
+  """Percent."""
+  rate: Float
+}
+
+"""What a template renders: product pages or category pages."""
+enum TemplateFor {
+  CATEGORY
+  PRODUCT
+}
+
+type TierPrice {
+  minQuantity: Int
+  price: Money
+}
+
+union TokenRefreshResult = AuthenticationError | NotFoundError | PermissionDeniedError | SessionPayload | ValidationError
+
+type TrackingNumber {
+  carrier: String
+  number: String
+  url: String
+}
+
+type ValidationError implements Error {
+  code: ErrorCode
+  fieldErrors: [FieldError!]
+  message: String
+}

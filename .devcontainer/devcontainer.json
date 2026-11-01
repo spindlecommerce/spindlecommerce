@@ -1,0 +1,19 @@
+{
+  "name": "Ecom",
+  "dockerComposeFile": ["../compose.yaml", "compose.devcontainer.yaml"],
+  "service": "app",
+  "initializeCommand": "docker compose build app",
+  "workspaceFolder": "/app",
+  "overrideCommand": false,
+  "remoteUser": "node",
+  "forwardPorts": [4000, 5432],
+  "portsAttributes": {
+    "4000": { "label": "Ecom API (GraphiQL)" },
+    "5432": { "label": "PostgreSQL" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["GraphQL.vscode-graphql-syntax", "vitest.explorer"]
+    }
+  }
+}

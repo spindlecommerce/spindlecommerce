@@ -1,0 +1,14 @@
+node_modules/
+.data/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+admin/dist/
+# Vercel build output (pnpm vercel:build) and `vercel link` state
+.vercel/
+
+# The Next.js sample storefront, kept in its own repository
+storefront/

@@ -7,6 +7,7 @@ import { placeDraftOrder, quoteDraftOrder, type DraftOrderQuote } from "../../mo
 import { addOrderNote, cancelOrder, capturePayment, refundOrder, shipOrder, updateOrderAddresses } from "../../modules/orders/service.ts";
 import type { FulfillmentShipment } from "../../modules/orders/tables.ts";
 import { listTransactions } from "../../modules/payments/service.ts";
+import { hasPermission } from "../../modules/staff/service.ts";
 import { ADMIN, BOTH, builder, connectionComplexity, rawId, STOREFRONT } from "../builder.ts";
 import type { GraphQLContext } from "../context.ts";
 import { keysetConnection } from "../pagination.ts";
@@ -32,7 +33,7 @@ import { FulfillmentStatusEnum, OrderStatusEnum, PaymentStatusEnum } from "./ord
 import { ShippingProviderRef } from "./shipping.ts";
 
 const canSeeOrder = (ctx: GraphQLContext, order: Order | null) =>
-  !!order && (ctx.api === "admin" || (ctx.customer !== null && order.customerId === ctx.customer.id));
+  !!order && (ctx.api === "admin" ? hasPermission(ctx.permissions, "orders:read") : ctx.customer !== null && order.customerId === ctx.customer.id);
 
 // ---------------------------------------------------------------- order documents
 
@@ -194,6 +195,7 @@ const OrderShippingMethodRef = builder.objectRef<NonNullable<Order["shippingMeth
 });
 
 builder.node(OrderRef, {
+  authScopes: (_order, ctx) => ctx.api === "admin" ? { permission: "orders:read" } : true,
   id: { resolve: (o) => o.id },
   loadMany: async (ids, ctx) => (await ctx.loaders.order.loadMany(ids)).map((o) => (o instanceof Error || !canSeeOrder(ctx, o) ? null : o)),
   fields: (t) => ({
@@ -221,7 +223,7 @@ builder.node(OrderRef, {
       description: "Open, unshipped and not yet charged.",
       resolve: (o) => o.status === "open" && o.fulfillmentStatus === "unfulfilled" && o.amountCaptured === 0,
     }),
-    customer: t.field({ type: CustomerRef, nullable: true, subGraphs: ADMIN, resolve: (o, _a, ctx) => (o.customerId ? ctx.loaders.customer.load(o.customerId) : null) }),
+    customer: t.field({ type: CustomerRef, nullable: true, subGraphs: ADMIN, resolve: (o, _a, ctx) => (o.customerId && hasPermission(ctx.permissions, "customers:read") ? ctx.loaders.customer.load(o.customerId) : null) }),
     channel: t.field({ type: ChannelRef, subGraphs: ADMIN, resolve: async (o, _a, ctx) => (await ctx.db.query.channels.findFirst({ where: (c, { eq }) => eq(c.id, o.channelId) }))! }),
     timeline: t.field({ type: [OrderEventRef], subGraphs: ADMIN, resolve: (o, _a, ctx) => ctx.loaders.orderEvents.load(o.id) }),
     transactions: t.field({ type: [PaymentTransactionRef], subGraphs: ADMIN, resolve: (o, _a, ctx) => listTransactions(ctx.db, o.id) }),

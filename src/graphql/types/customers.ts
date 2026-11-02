@@ -25,6 +25,7 @@ import {
   type Customer,
 } from "../../modules/customers/service.ts";
 import { listOrders } from "../../modules/orders/read.ts";
+import { hasPermission } from "../../modules/staff/service.ts";
 import { ADMIN, BOTH, builder, connectionComplexity, rawId, STOREFRONT } from "../builder.ts";
 import type { GraphQLContext } from "../context.ts";
 import { keysetConnection } from "../pagination.ts";
@@ -34,9 +35,14 @@ import { AcceptedPayload, AddressInput, compact, DeletePayload } from "./common.
 import { OrderStatusEnum } from "./order-enums.ts";
 
 const canSeeCustomer = (ctx: GraphQLContext, customer: Customer | null) =>
-  !!customer && (ctx.api === "admin" ? true : ctx.customer?.id === customer.id);
+  !!customer && (ctx.api === "admin" ? hasPermission(ctx.permissions, "customers:read") : ctx.customer?.id === customer.id);
+
+// Resolvers also return customers directly (e.g. Order.customer and mutation payloads), without
+// going through the Relay loader. Storefront auth payloads retain their resolver authorization.
+const customerReadScopes = (_customer: unknown, ctx: GraphQLContext) => ctx.api === "admin" ? { permission: "customers:read" } : true;
 
 builder.node(CustomerRef, {
+  authScopes: customerReadScopes,
   id: { resolve: (c) => c.id },
   loadMany: async (ids, ctx) => (await ctx.loaders.customer.loadMany(ids)).map((c) => (c instanceof Error || !canSeeCustomer(ctx, c) ? null : c)),
   fields: (t) => ({
@@ -52,6 +58,7 @@ builder.node(CustomerRef, {
     defaultBillingAddress: t.field({ type: CustomerAddressRef, nullable: true, resolve: async (c, _a, ctx) => (await ctx.loaders.customerAddresses.load(c.id)).find((a) => a.isDefaultBilling) ?? null }),
     orders: t.connection({
       type: OrderRef,
+      authScopes: (_c, _a, ctx) => ctx.api === "admin" ? { permission: "orders:read" } : true,
       description: "Newest first.",
       args: { status: t.arg({ type: OrderStatusEnum }) },
       complexity: connectionComplexity,
@@ -75,8 +82,10 @@ builder.node(CustomerRef, {
 });
 
 builder.node(CustomerAddressRef, {
+  authScopes: customerReadScopes,
   id: { resolve: (a) => a.id },
   loadMany: async (ids, ctx) => {
+    if (ctx.api === "admin" && !hasPermission(ctx.permissions, "customers:read")) return ids.map(() => null);
     if (ctx.api === "storefront" && !ctx.customer) return ids.map(() => null);
     const rows = await ctx.db.query.customerAddresses.findMany({ where: (a, { inArray }) => inArray(a.id, ids) });
     return ids.map((id) => rows.find((r) => r.id === id && (ctx.api === "admin" || r.customerId === ctx.customer?.id)) ?? null);
